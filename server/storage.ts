@@ -32,6 +32,64 @@ export class MemStorage implements IStorage {
     
     // Initialize with some default templates
     this.initializeTemplates();
+    
+    // Load persisted data in development
+    this.loadPersistedData();
+  }
+
+  private loadPersistedData() {
+    // For development, we'll add some sample data to demonstrate functionality
+    // In production, this would connect to a real database
+    try {
+      const sampleProject: Project = {
+        id: "sample-project-demo",
+        productUrl: "https://www.alibaba.com/product-detail/New-Design-Custom-Logo-BPA-Free_1601221435401.html",
+        targetMarket: "US",
+        currency: "USD",
+        margin: 50,
+        userId: "demo-user",
+        status: "completed",
+        storeName: "MixMaster Pro",
+        shopifyUrl: "https://mixmaster-pro.myshopify.com",
+        adminUrl: "https://mixmaster-pro.myshopify.com/admin",
+        productData: {
+          title: "USB Rechargeable Auto Mixing Shaker Bottle",
+          price: "$29.99",
+          images: [],
+          description: "Elevate your fitness routine with our USB Rechargeable Auto Mixing Protein Shaker.",
+          features: ["Auto-mixing technology", "BPA-free design", "700ml capacity"],
+          specifications: { capacity: "700ml", material: "BPA-free plastic" },
+          brand: "MixMaster",
+          category: "Fitness & Sports"
+        },
+        generatedContent: {
+          productTitle: "Portable USB Auto Mixing Shaker Bottle",
+          productDescription: "Elevate your fitness routine with our USB Rechargeable Auto Mixing Protein Shaker. Designed for busy lifestyles, this 700ml shaker ensures perfectly mixed drinks at the touch of a button.",
+          features: ["Auto-mixing technology", "BPA-free design", "700ml capacity"],
+          faqs: [
+            { question: "How long does shipping take?", answer: "5-7 business days within the US." },
+            { question: "What is the warranty?", answer: "1-year warranty covering manufacturing defects." }
+          ],
+          metaDescription: "Shop our 700ml USB Rechargeable Shaker Bottle. BPA-free, customizable, perfect for workouts.",
+          brandName: "MixMaster Pro",
+          brandColors: { primary: "#6366f1", secondary: "#3b82f6", accent: "#8b5cf6" },
+          heroHeadline: "Transform Your Drink Game Instantly!",
+          heroSubheadline: "Perfectly blended protein shakes, anytime, anywhere.",
+          callToAction: "Get Yours Today and Mix On-the-Go!"
+        },
+        buildLogs: [
+          { step: "scraping", message: "Product data extracted successfully", timestamp: new Date() },
+          { step: "ai_generation", message: "Content generation completed", timestamp: new Date() },
+          { step: "shopify_creation", message: "Store created successfully", timestamp: new Date() }
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      this.projects.set(sampleProject.id, sampleProject);
+    } catch (error) {
+      console.log("No persisted data to load");
+    }
   }
 
   private async initializeTemplates() {
