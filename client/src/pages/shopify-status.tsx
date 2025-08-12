@@ -213,21 +213,19 @@ export default function ShopifyStatus() {
               </div>
               
               <div className="pt-4 border-t border-gray-200 space-y-3">
-                <Link href="/shopify-setup-guide" className="w-full">
+                <Link href="/generate-token" className="w-full">
                   <Button className="w-full">
                     <Key className="mr-2 h-4 w-4" />
-                    View Detailed Setup Guide
+                    Generate Access Token (Quick Fix)
                   </Button>
                 </Link>
                 
-                <Button 
-                  variant="outline"
-                  className="w-full" 
-                  onClick={() => window.open('https://partners.shopify.com', '_blank')}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Go to Shopify Partners Dashboard
-                </Button>
+                <Link href="/shopify-setup-guide" className="w-full">
+                  <Button variant="outline" className="w-full">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Complete Setup Guide
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

@@ -9,6 +9,7 @@ import StorePreview from "@/pages/store-preview";
 import ConnectShopify from "@/pages/connect-shopify";
 import ShopifyStatus from "@/pages/shopify-status";
 import ShopifySetupGuide from "@/pages/shopify-setup-guide";
+import GenerateTokenGuide from "@/pages/generate-token-guide";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/connect-shopify" component={ConnectShopify} />
       <Route path="/shopify-status" component={ShopifyStatus} />
       <Route path="/shopify-setup-guide" component={ShopifySetupGuide} />
+      <Route path="/generate-token" component={GenerateTokenGuide} />
       <Route component={NotFound} />
     </Switch>
   );
