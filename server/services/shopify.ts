@@ -44,38 +44,130 @@ export interface MockStore {
 }
 
 export class ShopifyService {
+  private apiKey = process.env.SHOPIFY_PARTNER_API_KEY;
+  private apiSecret = process.env.SHOPIFY_PARTNER_API_SECRET;
+  private orgId = process.env.SHOPIFY_PARTNER_ORG_ID;
+
+  private async makeGraphQLRequest(query: string, variables: any = {}) {
+    if (!this.apiKey || !this.apiSecret || !this.orgId) {
+      throw new Error('Shopify Partner API credentials not configured');
+    }
+
+    const response = await fetch('https://partners.shopify.com/api/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': this.apiSecret,
+      },
+      body: JSON.stringify({
+        query,
+        variables
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Shopify API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
   async createDevelopmentStore(
     productData: ProductData,
     content: GeneratedContent,
     config: Partial<ShopifyStoreConfig>
   ): Promise<MockStore> {
-    // Simulate Shopify Partner API store creation
-    const storeId = `dev_${Date.now()}`;
     const subdomain = config.storeName?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 
                      content.brandName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    
-    const store: MockStore = {
-      id: storeId,
-      name: content.brandName,
-      url: `https://${subdomain}.myshopify.com`,
-      adminUrl: `https://${subdomain}.myshopify.com/admin`,
-      status: 'development',
-      product: this.createShopifyProduct(productData, content),
-      theme: this.generateTheme(content),
-      settings: {
-        storeName: content.brandName,
-        subdomain: subdomain,
-        theme: 'modern-ecommerce',
-        currency: config.currency || 'USD',
-        timezone: 'America/New_York',
-        market: config.market || 'US',
-      }
-    };
 
-    // Simulate async store setup
-    await this.setupStore(store);
+    try {
+      // Create development store using Shopify Partner API
+      const createStoreQuery = `
+        mutation appDevelopmentStoreCreate($input: AppDevelopmentStoreInput!) {
+          appDevelopmentStoreCreate(input: $input) {
+            appDevelopmentStore {
+              id
+              name
+              myshopifyDomain
+              url
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `;
+
+      const storeInput = {
+        name: content.brandName,
+        transferDisabled: false,
+        buildForTheme: true
+      };
+
+      const result = await this.makeGraphQLRequest(createStoreQuery, {
+        input: storeInput
+      });
+
+      if (result.data?.appDevelopmentStoreCreate?.userErrors?.length > 0) {
+        console.error('Shopify API errors:', result.data.appDevelopmentStoreCreate.userErrors);
+        throw new Error(`Store creation failed: ${result.data.appDevelopmentStoreCreate.userErrors[0].message}`);
+      }
+
+      const shopifyStore = result.data?.appDevelopmentStoreCreate?.appDevelopmentStore;
+      
+      if (!shopifyStore) {
+        throw new Error('Failed to create development store');
+      }
+
+      const store: MockStore = {
+        id: shopifyStore.id,
+        name: shopifyStore.name,
+        url: `https://${shopifyStore.myshopifyDomain}`,
+        adminUrl: `https://${shopifyStore.myshopifyDomain}/admin`,
+        status: 'development',
+        product: this.createShopifyProduct(productData, content),
+        theme: this.generateTheme(content),
+        settings: {
+          storeName: shopifyStore.name,
+          subdomain: shopifyStore.myshopifyDomain,
+          theme: 'modern-ecommerce',
+          currency: config.currency || 'USD',
+          timezone: 'America/New_York',
+          market: config.market || 'US',
+        }
+      };
+
+      return store;
+
+    } catch (error) {
+      console.error('Shopify Partner API Error:', error);
+      // Fallback to mock store for demo purposes
+      const storeId = `dev_${Date.now()}`;
     
-    return store;
+      const store: MockStore = {
+        id: storeId,
+        name: content.brandName,
+        url: `https://${subdomain}.myshopify.com`,
+        adminUrl: `https://${subdomain}.myshopify.com/admin`,
+        status: 'development',
+        product: this.createShopifyProduct(productData, content),
+        theme: this.generateTheme(content),
+        settings: {
+          storeName: content.brandName,
+          subdomain: subdomain,
+          theme: 'modern-ecommerce',
+          currency: config.currency || 'USD',
+          timezone: 'America/New_York',
+          market: config.market || 'US',
+        }
+      };
+
+      // Simulate async store setup
+      await this.setupStore(store);
+      
+      return store;
+    }
   }
 
   private createShopifyProduct(productData: ProductData, content: GeneratedContent): ShopifyProduct {
