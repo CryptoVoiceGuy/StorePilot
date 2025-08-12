@@ -1,0 +1,186 @@
+import { GeneratedContent } from "./ai";
+import { ProductData } from "./scraper";
+
+export interface ShopifyStoreConfig {
+  storeName: string;
+  subdomain: string;
+  theme: string;
+  currency: string;
+  timezone: string;
+  market: string;
+}
+
+export interface ShopifyProduct {
+  title: string;
+  description: string;
+  vendor: string;
+  productType: string;
+  variants: Array<{
+    title: string;
+    price: string;
+    sku: string;
+    inventory: number;
+  }>;
+  images: Array<{
+    src: string;
+    alt: string;
+  }>;
+  tags: string[];
+  seo: {
+    title: string;
+    description: string;
+  };
+}
+
+export interface MockStore {
+  id: string;
+  name: string;
+  url: string;
+  adminUrl: string;
+  status: 'development' | 'live';
+  product: ShopifyProduct;
+  theme: any;
+  settings: ShopifyStoreConfig;
+}
+
+export class ShopifyService {
+  async createDevelopmentStore(
+    productData: ProductData,
+    content: GeneratedContent,
+    config: Partial<ShopifyStoreConfig>
+  ): Promise<MockStore> {
+    // Simulate Shopify Partner API store creation
+    const storeId = `dev_${Date.now()}`;
+    const subdomain = config.storeName?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 
+                     content.brandName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    const store: MockStore = {
+      id: storeId,
+      name: content.brandName,
+      url: `https://${subdomain}.myshopify.com`,
+      adminUrl: `https://${subdomain}.myshopify.com/admin`,
+      status: 'development',
+      product: this.createShopifyProduct(productData, content),
+      theme: this.generateTheme(content),
+      settings: {
+        storeName: content.brandName,
+        subdomain: subdomain,
+        theme: 'modern-ecommerce',
+        currency: config.currency || 'USD',
+        timezone: 'America/New_York',
+        market: config.market || 'US',
+      }
+    };
+
+    // Simulate async store setup
+    await this.setupStore(store);
+    
+    return store;
+  }
+
+  private createShopifyProduct(productData: ProductData, content: GeneratedContent): ShopifyProduct {
+    return {
+      title: content.productTitle,
+      description: content.productDescription,
+      vendor: content.brandName,
+      productType: productData.category || 'General',
+      variants: [
+        {
+          title: 'Default',
+          price: productData.price.replace(/[^0-9.]/g, ''),
+          sku: `SKU-${Date.now()}`,
+          inventory: 100,
+        }
+      ],
+      images: productData.images.map(img => ({
+        src: img,
+        alt: content.productTitle,
+      })),
+      tags: this.generateTags(productData, content),
+      seo: {
+        title: content.metaDescription,
+        description: content.metaDescription,
+      }
+    };
+  }
+
+  private generateTheme(content: GeneratedContent) {
+    return {
+      name: 'AI Generated Theme',
+      settings: {
+        colors: content.brandColors,
+        typography: {
+          headingFont: 'Inter',
+          bodyFont: 'Inter',
+        },
+        layout: {
+          maxWidth: '1200px',
+          headerStyle: 'modern',
+          footerStyle: 'minimal',
+        },
+        sections: {
+          hero: {
+            enabled: true,
+            headline: content.heroHeadline,
+            subheadline: content.heroSubheadline,
+            ctaText: content.callToAction,
+          },
+          features: {
+            enabled: true,
+            features: content.features,
+          },
+          testimonials: {
+            enabled: true,
+          },
+          faq: {
+            enabled: true,
+            faqs: content.faqs,
+          }
+        }
+      }
+    };
+  }
+
+  private generateTags(productData: ProductData, content: GeneratedContent): string[] {
+    const tags = [];
+    
+    if (productData.brand) tags.push(productData.brand);
+    if (productData.category) tags.push(productData.category);
+    
+    // Add feature-based tags
+    content.features.forEach(feature => {
+      const words = feature.split(' ').filter(word => word.length > 3);
+      tags.push(...words.slice(0, 2));
+    });
+    
+    return Array.from(new Set(tags)).slice(0, 10);
+  }
+
+  private async setupStore(store: MockStore): Promise<void> {
+    // Simulate store setup tasks
+    await this.delay(1000); // Theme installation
+    await this.delay(500);  // Product creation
+    await this.delay(500);  // Pages setup
+    await this.delay(300);  // Payment config
+  }
+
+  async transferStore(storeId: string, ownerEmail: string): Promise<{ success: boolean; transferUrl?: string }> {
+    // Simulate store transfer process
+    await this.delay(2000);
+    
+    return {
+      success: true,
+      transferUrl: `https://partners.shopify.com/organizations/transfer/${storeId}?email=${encodeURIComponent(ownerEmail)}`
+    };
+  }
+
+  async updateStoreStatus(storeId: string, status: 'development' | 'live'): Promise<boolean> {
+    // Simulate status update
+    await this.delay(500);
+    return true;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
