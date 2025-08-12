@@ -7,6 +7,8 @@ import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import StorePreview from "@/pages/store-preview";
 import ConnectShopify from "@/pages/connect-shopify";
+import ShopifyStatus from "@/pages/shopify-status";
+import ShopifySetupGuide from "@/pages/shopify-setup-guide";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +18,8 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/store/:id" component={StorePreview} />
       <Route path="/connect-shopify" component={ConnectShopify} />
+      <Route path="/shopify-status" component={ShopifyStatus} />
+      <Route path="/shopify-setup-guide" component={ShopifySetupGuide} />
       <Route component={NotFound} />
     </Switch>
   );

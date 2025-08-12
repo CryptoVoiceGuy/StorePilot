@@ -212,8 +212,16 @@ export default function ShopifyStatus() {
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-gray-200">
+              <div className="pt-4 border-t border-gray-200 space-y-3">
+                <Link href="/shopify-setup-guide" className="w-full">
+                  <Button className="w-full">
+                    <Key className="mr-2 h-4 w-4" />
+                    View Detailed Setup Guide
+                  </Button>
+                </Link>
+                
                 <Button 
+                  variant="outline"
                   className="w-full" 
                   onClick={() => window.open('https://partners.shopify.com', '_blank')}
                 >
