@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import StorePreview from "@/pages/store-preview";
+import ConnectShopify from "@/pages/connect-shopify";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/store/:id" component={StorePreview} />
+      <Route path="/connect-shopify" component={ConnectShopify} />
       <Route component={NotFound} />
     </Switch>
   );

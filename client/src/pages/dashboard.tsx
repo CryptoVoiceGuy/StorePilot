@@ -72,10 +72,12 @@ export default function Dashboard() {
               <Link href="/">
                 <Button variant="ghost">Back to Home</Button>
               </Link>
-              <Button variant="outline">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
+              <Link href="/connect-shopify">
+                <Button variant="outline">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Connect Shopify
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

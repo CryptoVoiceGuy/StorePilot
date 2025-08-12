@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -143,8 +144,17 @@ export function BuildStatus({ projectId }: BuildStatusProps) {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="font-semibold text-green-800 mb-2">Store Ready!</h4>
                 <p className="text-green-700 text-sm mb-3">
-                  Your store has been successfully created and is ready for launch.
+                  Your store has been successfully created with all AI-generated content.
                 </p>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-3">
+                  <p className="text-yellow-800 text-sm">
+                    <strong>Demo Mode:</strong> These are mock URLs for demonstration. 
+                    <Link href="/connect-shopify" className="underline ml-1">
+                      Connect your Shopify Partner account
+                    </Link> to create real stores.
+                  </p>
+                </div>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
