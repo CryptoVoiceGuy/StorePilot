@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,9 +23,19 @@ export default function Dashboard() {
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const activeProject = urlParams.get('project');
 
-  const { data: projects, isLoading } = useQuery<any[]>({
+  const { data: projects, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["/api/projects"],
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
+
+  // Auto-refresh projects every 10 seconds to show new stores
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -91,7 +101,17 @@ export default function Dashboard() {
             {/* Recent Projects */}
             <Card>
               <CardHeader>
-                <CardTitle>Your Stores</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Your Stores</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => refetch()}
+                    className="h-8 px-2"
+                  >
+                    Refresh
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
