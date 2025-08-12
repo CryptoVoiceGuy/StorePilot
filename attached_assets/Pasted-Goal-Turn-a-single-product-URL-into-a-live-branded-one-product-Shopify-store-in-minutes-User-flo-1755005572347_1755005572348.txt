@@ -1,0 +1,107 @@
+Goal
+Turn a single product URL into a live, branded, one‑product Shopify store in minutes.
+
+User flow
+	1.	User pastes a product link.
+	2.	System parses title, price, images, specs.
+	3.	System writes copy, edits images, sets price, and builds a store.
+	4.	System hands back a live URL and admin login.
+
+Two launch modes
+A) New sellers. Your app creates a development store under your Partner account, installs your app, builds the store, then transfers ownership to the buyer.
+B) Existing sellers. Your public app installs into their store and builds a new product and theme section from the link.
+
+MVP scope
+• Input: one URL from Amazon, Alibaba, manufacturer page, or a Dropbox image folder.
+• Output: single‑product store with home, product, about, contact, policy pages.
+• Theme: one free theme you have pre‑templated.
+• Branding: color from product image, auto logo text, favicon.
+• Price: cost plus fixed margin or user override.
+• Payments, shipping, taxes: default presets for AU, US, EU.
+
+Data extraction
+• Fetch page HTML.
+• Pull title, bullet features, price, image URLs, spec tables.
+• Clean the text. Strip HTML. Fix casing. Remove trademarks and claims you cannot support.
+• If the site blocks scraping, prompt user to upload images and specs.
+
+Content generation
+• Product title options: 3 variants under 60 chars.
+• Bullets: 5 benefits written in second person.
+• Description: 120–180 words with materials, size, what is in the box.
+• FAQs: 4 items. Shipping, returns, compatibility, warranty.
+• Policy pages: privacy, terms, refund, shipping. Use your base templates and fill variables.
+
+Image pipeline
+• Download the largest clean images.
+• Remove background.
+• Center on 2000 px square.
+• Create 4 assets: hero, lifestyle mockup, detail close‑up, size chart image.
+• Add subtle brand color frame and logo in the corner.
+• Compress for web.
+
+Shopify automation, new store route
+• Partner API. Create a development store with a unique subdomain.
+• Auto install your app in the dev store.
+• Set store currency, timezone, and legal address placeholders.
+• Upload theme zip you control with your sections pre‑wired.
+• Create product via Admin GraphQL API.
+• Create pages for About, Contact, Policies with your templates.
+• Link menus. Set product as “featured” on the home page.
+• Activate Shopify Payments test mode or prompt for payment setup.
+• Create a staff account for the buyer. Send claim link.
+• Transfer store when they enter billing.
+
+Shopify automation, existing store route
+• OAuth install.
+• Create product, media, variants.
+• Create a new theme copy. Apply your sections and presets.
+• Publish the theme or leave as draft with a preview link.
+
+Theme setup
+• Start from Ride. Save a fork with:
+Home sections: hero, 3 badges, product focus, social proof block, FAQs.
+PDP sections: gallery, bullets, details, size table image, trust badges.
+• Use JSON templates so you only drop in content, colors, and media.
+
+Payments, shipping, taxes
+• Default to Shopify Payments, manual shipping rates, and tax inclusive display for AU.
+• One shipping rate to start. Free over a threshold.
+• Prompt the user to complete business verification before transfer.
+
+Limits and truths
+• You cannot create a paid merchant store for a stranger without a transfer step. Use development store creation then transfer.
+• Many sites forbid scraping. Prefer supplier pages and user uploads. Cache nothing sensitive.
+• Claims like “medical” or “weight loss” risk rejection. Keep copy factual.
+
+Stack
+• Backend: Node.js with Express. Queue with BullMQ.
+• Parsing: Playwright for headless fetch. Cheerio for DOM.
+• Copy: your LLM of choice. Guardrails to avoid banned claims.
+• Images: background removal library, Pillow or Sharp, simple overlay.
+• Shopify: Admin GraphQL API, Theme files, Partner GraphQL API for dev store creation.
+• DB: Postgres for projects, audit, and templates.
+• Storage: S3 for images and theme zips.
+
+Core endpoints
+POST /build
+body: { productUrl, targetMarket, currency, margin, email }
+returns: { statusUrl }
+
+GET /status/:id
+returns: step, logs, preview links
+
+POST /finalize
+body: { id, businessDetails, paymentSetupDone }
+does store transfer and domain prompts
+
+Review checklist before you scale
+• One‑click uninstall cleans all resources.
+• Billing only through Shopify Billing API for subscription plans.
+• Clear privacy policy, support email, and data deletion path.
+• No gated functionality during review. Provide a demo mode.
+
+Monetization
+• One‑time “store build” fee, for example 199 to 499 AUD per store.
+• Optional monthly plan, for example 19 to 49 AUD, for updates, restocking pages, and A/B tests.
+• Affiliate revenue on apps you auto‑install, with user consent
