@@ -14,6 +14,7 @@ import {
   Eye 
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ReferralFlow } from "./referral-flow";
 
 interface BuildStatusProps {
   projectId: string;
@@ -276,6 +277,14 @@ export function BuildStatus({ projectId }: BuildStatusProps) {
           </CardContent>
         </Card>
       )}
+      
+      {/* Referral Flow - Show after store is completed */}
+      <ReferralFlow 
+        projectId={project.id}
+        productData={project.productData}
+        generatedContent={project.generatedContent}
+        status={project.status}
+      />
     </div>
   );
 }

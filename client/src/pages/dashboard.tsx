@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UrlInput } from "@/components/url-input";
 import { BuildStatus } from "@/components/build-status";
+import { RevenueDashboard } from "@/components/revenue-dashboard";
 import { 
   Store, 
   Plus, 
@@ -15,7 +17,9 @@ import {
   AlertCircle,
   ExternalLink,
   Eye,
-  Settings
+  Settings,
+  DollarSign,
+  TrendingUp
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -200,22 +204,35 @@ export default function Dashboard() {
 
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {activeProject ? (
-              <BuildStatus projectId={activeProject} />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Welcome to StoreForge AI</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="text-center py-12">
-                    <Store className="h-16 w-16 mx-auto mb-6 text-gray-300" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Ready to build your first store?
-                    </h3>
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Paste any product URL to get started. Our AI will handle the rest, creating a professional Shopify store in minutes.
-                    </p>
+            <Tabs defaultValue="stores" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stores" className="flex items-center gap-2">
+                  <Store className="h-4 w-4" />
+                  Store Builder
+                </TabsTrigger>
+                <TabsTrigger value="revenue" className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Revenue Dashboard
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="stores" className="space-y-4">
+                {activeProject ? (
+                  <BuildStatus projectId={activeProject} />
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Welcome to StoreForge AI</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="text-center py-12">
+                        <Store className="h-16 w-16 mx-auto mb-6 text-gray-300" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Ready to build your first store?
+                        </h3>
+                        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                          Paste any product URL to get started. Our AI will handle the rest, creating a professional Shopify store in minutes.
+                        </p>
                     
                     <div className="grid md:grid-cols-3 gap-4 max-w-2xl mx-auto">
                       <div className="text-center">
@@ -284,6 +301,12 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             )}
+              </TabsContent>
+              
+              <TabsContent value="revenue" className="space-y-4">
+                <RevenueDashboard />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

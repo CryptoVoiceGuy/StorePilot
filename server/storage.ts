@@ -1,4 +1,10 @@
-import { type User, type InsertUser, type Project, type InsertProject, type Template, type InsertTemplate } from "@shared/schema";
+import { 
+  type User, type InsertUser, 
+  type Project, type InsertProject, 
+  type Template, type InsertTemplate,
+  type ShopifyStore, type InsertShopifyStore,
+  type Referral, type InsertReferral
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -18,17 +24,35 @@ export interface IStorage {
   getTemplate(id: string): Promise<Template | undefined>;
   getActiveTemplates(): Promise<Template[]>;
   createTemplate(template: InsertTemplate): Promise<Template>;
+  
+  // Shopify Stores
+  getShopifyStore(id: string): Promise<ShopifyStore | undefined>;
+  getShopifyStoreByDomain(shopDomain: string): Promise<ShopifyStore | undefined>;
+  getShopifyStoresByUser(userId: string): Promise<ShopifyStore[]>;
+  createShopifyStore(store: InsertShopifyStore): Promise<ShopifyStore>;
+  updateShopifyStore(id: string, updates: Partial<ShopifyStore>): Promise<ShopifyStore | undefined>;
+  
+  // Referrals
+  getReferral(id: string): Promise<Referral | undefined>;
+  getReferralByCode(code: string): Promise<Referral | undefined>;
+  getReferralsByUser(userId: string): Promise<Referral[]>;
+  createReferral(referral: InsertReferral): Promise<Referral>;
+  updateReferral(id: string, updates: Partial<Referral>): Promise<Referral | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private projects: Map<string, Project>;
   private templates: Map<string, Template>;
+  private shopifyStores: Map<string, ShopifyStore>;
+  private referrals: Map<string, Referral>;
 
   constructor() {
     this.users = new Map();
     this.projects = new Map();
     this.templates = new Map();
+    this.shopifyStores = new Map();
+    this.referrals = new Map();
     
     // Initialize with some default templates
     this.initializeTemplates();
@@ -204,6 +228,102 @@ export class MemStorage implements IStorage {
     };
     this.templates.set(id, template);
     return template;
+  }
+  
+  // Shopify Stores
+  async getShopifyStore(id: string): Promise<ShopifyStore | undefined> {
+    return this.shopifyStores.get(id);
+  }
+  
+  async getShopifyStoreByDomain(shopDomain: string): Promise<ShopifyStore | undefined> {
+    return Array.from(this.shopifyStores.values()).find(
+      (store) => store.shopDomain === shopDomain
+    );
+  }
+  
+  async getShopifyStoresByUser(userId: string): Promise<ShopifyStore[]> {
+    return Array.from(this.shopifyStores.values()).filter(
+      (store) => store.userId === userId
+    );
+  }
+  
+  async createShopifyStore(storeData: InsertShopifyStore): Promise<ShopifyStore> {
+    const id = randomUUID();
+    const store: ShopifyStore = {
+      ...storeData,
+      id,
+      projectId: storeData.projectId || null,
+      scope: storeData.scope || null,
+      isActive: true,
+      referralStatus: storeData.referralStatus || null,
+      referralDate: null,
+      commissionTier: storeData.commissionTier || null,
+      monthlyCommission: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.shopifyStores.set(id, store);
+    return store;
+  }
+  
+  async updateShopifyStore(id: string, updates: Partial<ShopifyStore>): Promise<ShopifyStore | undefined> {
+    const store = this.shopifyStores.get(id);
+    if (!store) return undefined;
+    
+    const updatedStore = {
+      ...store,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.shopifyStores.set(id, updatedStore);
+    return updatedStore;
+  }
+  
+  // Referrals
+  async getReferral(id: string): Promise<Referral | undefined> {
+    return this.referrals.get(id);
+  }
+  
+  async getReferralByCode(code: string): Promise<Referral | undefined> {
+    return Array.from(this.referrals.values()).find(
+      (referral) => referral.referralCode === code
+    );
+  }
+  
+  async getReferralsByUser(userId: string): Promise<Referral[]> {
+    return Array.from(this.referrals.values()).filter(
+      (referral) => referral.userId === userId
+    );
+  }
+  
+  async createReferral(referralData: InsertReferral): Promise<Referral> {
+    const id = randomUUID();
+    const referral: Referral = {
+      ...referralData,
+      id,
+      projectId: referralData.projectId || null,
+      customerEmail: referralData.customerEmail || null,
+      status: referralData.status || "pending",
+      clickedAt: null,
+      convertedAt: null,
+      shopifyStoreId: null,
+      metadata: null,
+      createdAt: new Date(),
+    };
+    this.referrals.set(id, referral);
+    return referral;
+  }
+  
+  async updateReferral(id: string, updates: Partial<Referral>): Promise<Referral | undefined> {
+    const referral = this.referrals.get(id);
+    if (!referral) return undefined;
+    
+    const updatedReferral = {
+      ...referral,
+      ...updates,
+    };
+    this.referrals.set(id, updatedReferral);
+    return updatedReferral;
   }
 }
 

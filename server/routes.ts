@@ -5,6 +5,8 @@ import { insertProjectSchema } from "@shared/schema";
 import { ProductScraper } from "./services/scraper";
 import { AIContentGenerator } from "./services/ai";
 import { ShopifyService } from "./services/shopify";
+import { shopifyOAuth } from "./services/shopify-oauth";
+import { referralService } from "./services/referral";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const scraper = new ProductScraper();
@@ -201,6 +203,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buildLogs: [
           ...(await storage.getProject(projectId))?.buildLogs as any[] || [],
           { step: "error", message: `Build failed: ${error instanceof Error ? error.message : 'Unknown error'}`, timestamp: new Date() }
+        ],
+      });
+    }
+  }
+
+  // ===== REFERRAL & OAUTH ROUTES =====
+  
+  /**
+   * Create referral link for Shopify signup
+   */
+  app.post("/api/referral/create", async (req, res) => {
+    try {
+      const { projectId, customerEmail } = req.body;
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      // Generate store name suggestions from product data
+      const storeNameSuggestions = project.generatedContent?.brandName ? 
+        referralService.generateStoreNameSuggestions(project) : 
+        [`store-${Date.now()}`];
+      
+      // Create referral link
+      const { referralUrl, referral } = await referralService.createReferralLink(
+        projectId,
+        project.userId || "demo-user",
+        storeNameSuggestions[0],
+        customerEmail
+      );
+      
+      res.json({
+        referralUrl,
+        referralCode: referral.referralCode,
+        storeNameSuggestions,
+        instructions: {
+          step1: "Click the referral link to create your Shopify account",
+          step2: "Choose a store name and complete signup",
+          step3: "You'll be redirected back to complete store setup",
+          step4: "We'll automatically configure your store with your product"
+        }
+      });
+    } catch (error) {
+      console.error("Referral creation error:", error);
+      res.status(500).json({ error: "Failed to create referral link" });
+    }
+  });
+  
+  /**
+   * Begin OAuth flow after Shopify signup
+   */
+  app.get("/api/shopify/oauth/begin", async (req, res) => {
+    try {
+      const { code: referralCode, shop } = req.query as { code: string; shop: string };
+      
+      if (!referralCode) {
+        return res.status(400).json({ error: "Referral code required" });
+      }
+      
+      if (!shop) {
+        // If no shop provided yet, show waiting page
+        return res.send(`
+          <html>
+            <head>
+              <title>Completing Shopify Setup...</title>
+              <meta http-equiv="refresh" content="5">
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px; }
+                .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              </style>
+            </head>
+            <body>
+              <h1>Almost there!</h1>
+              <div class="spinner"></div>
+              <p>Waiting for your Shopify store to be created...</p>
+              <p>This page will automatically refresh.</p>
+            </body>
+          </html>
+        `);
+      }
+      
+      // Track referral click
+      await referralService.trackReferralClick(referralCode);
+      
+      // Generate OAuth state with referral code
+      const state = `${referralCode}:${shopifyOAuth.generateState()}`;
+      
+      // Store state in session or temporary storage
+      // For demo, we'll pass it through the OAuth flow
+      
+      // Redirect to Shopify OAuth
+      const authUrl = shopifyOAuth.generateAuthUrl(shop, state);
+      res.redirect(authUrl);
+      
+    } catch (error) {
+      console.error("OAuth begin error:", error);
+      res.status(500).json({ error: "Failed to start OAuth flow" });
+    }
+  });
+  
+  /**
+   * OAuth callback from Shopify
+   */
+  app.get("/api/shopify/callback", async (req, res) => {
+    try {
+      const { shop, code, state, hmac } = req.query as { 
+        shop: string; 
+        code: string; 
+        state: string;
+        hmac: string;
+      };
+      
+      // Verify request signature
+      if (!shopifyOAuth.verifyRequestSignature(req.query as any)) {
+        return res.status(401).json({ error: "Invalid request signature" });
+      }
+      
+      // Extract referral code from state
+      const [referralCode] = state.split(':');
+      
+      // Exchange code for access token
+      const { accessToken, scope } = await shopifyOAuth.exchangeCodeForToken(shop, code);
+      
+      // Get referral and project
+      const referral = await storage.getReferralByCode(referralCode);
+      if (!referral) {
+        return res.status(404).json({ error: "Referral not found" });
+      }
+      
+      const project = await storage.getProject(referral.projectId || '');
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      // Save Shopify store credentials
+      const shopifyStore = await storage.createShopifyStore({
+        userId: referral.userId || "demo-user",
+        projectId: referral.projectId,
+        shopDomain: shop,
+        accessToken,
+        scope,
+        referralStatus: "active",
+        commissionTier: "basic", // Will be updated based on actual plan
+      });
+      
+      // Mark referral as converted
+      await referralService.markReferralConverted(referralCode, shopifyStore.id);
+      
+      // Update project with store info
+      await storage.updateProject(project.id, {
+        shopifyUrl: `https://${shop}`,
+        adminUrl: `https://${shop}/admin`,
+        status: "configuring",
+      });
+      
+      // Start automatic store configuration
+      configureStoreAsync(shopifyStore.id, project.id);
+      
+      // Redirect to success page
+      res.redirect(`/?success=true&projectId=${project.id}`);
+      
+    } catch (error) {
+      console.error("OAuth callback error:", error);
+      res.status(500).json({ error: "Failed to complete OAuth flow" });
+    }
+  });
+  
+  /**
+   * Get referral statistics
+   */
+  app.get("/api/referral/stats", async (req, res) => {
+    try {
+      const userId = "demo-user"; // In production, get from session
+      const stats = await referralService.getReferralStats(userId);
+      
+      res.json({
+        ...stats,
+        estimatedMonthlyRevenueFormatted: `$${(stats.estimatedMonthlyRevenue / 100).toFixed(2)}`,
+        projectedAnnualRevenue: stats.estimatedMonthlyRevenue * 12,
+        projectedAnnualRevenueFormatted: `$${(stats.estimatedMonthlyRevenue * 12 / 100).toFixed(2)}`,
+      });
+    } catch (error) {
+      console.error("Stats error:", error);
+      res.status(500).json({ error: "Failed to get referral stats" });
+    }
+  });
+  
+  /**
+   * Configure store after OAuth (async)
+   */
+  async function configureStoreAsync(shopifyStoreId: string, projectId: string) {
+    try {
+      const store = await storage.getShopifyStore(shopifyStoreId);
+      const project = await storage.getProject(projectId);
+      
+      if (!store || !project) return;
+      
+      // Create API client
+      const apiClient = shopifyOAuth.createApiClient(store.shopDomain, store.accessToken);
+      
+      // Configure store with product data
+      if (project.productData && project.generatedContent) {
+        // Create product
+        await apiClient.createProduct({
+          title: project.generatedContent.productTitle,
+          body_html: project.generatedContent.productDescription,
+          vendor: project.generatedContent.brandName,
+          product_type: project.productData.category,
+          images: project.productData.images?.map((url: string) => ({ src: url })),
+          variants: [{
+            price: project.productData.price?.replace('$', ''),
+            inventory_quantity: 100,
+            inventory_management: 'shopify',
+          }],
+        });
+        
+        // Update project status
+        await storage.updateProject(projectId, {
+          status: "completed",
+          buildLogs: [
+            ...(project.buildLogs as any[] || []),
+            { step: "oauth_complete", message: "OAuth connection established", timestamp: new Date() },
+            { step: "store_configured", message: "Store configured successfully", timestamp: new Date() },
+          ],
+        });
+      }
+    } catch (error) {
+      console.error("Store configuration error:", error);
+      await storage.updateProject(projectId, {
+        status: "failed",
+        buildLogs: [
+          ...(await storage.getProject(projectId))?.buildLogs as any[] || [],
+          { step: "configuration_error", message: `Configuration failed: ${error}`, timestamp: new Date() }
         ],
       });
     }

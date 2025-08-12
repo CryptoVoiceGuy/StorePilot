@@ -1,6 +1,6 @@
 # Overview
 
-This is an AI-powered e-commerce store builder that transforms a single product URL into a complete, branded Shopify store within minutes. The application scrapes product data from various platforms (Amazon, AliExpress, manufacturer sites), generates compelling marketing content using AI, and automatically creates a fully functional single-product store with professional design, payment processing, and legal pages.
+This is an AI-powered Shopify store builder with integrated referral and OAuth systems that transforms product URLs into complete, branded stores while generating recurring revenue through Shopify Partner commissions. The platform combines automated store creation with a "Done-For-You" service model, earning 20% lifetime commissions on all referred Shopify subscriptions.
 
 # User Preferences
 
@@ -24,12 +24,16 @@ Preferred communication style: Simple, everyday language.
 ## Core Services
 - **ProductScraper**: Extracts product data from various e-commerce platforms with site-specific scraping logic
 - **AIContentGenerator**: Uses OpenAI API to generate marketing copy, product descriptions, FAQs, and branding
-- **ShopifyService**: Mock service for Shopify store creation and product management (prepared for Partner API integration)
+- **ShopifyService**: Partner API integration for store management and product configuration
+- **ShopifyOAuthService**: Handles OAuth authentication flow for connecting to customer Shopify stores
+- **ReferralService**: Manages referral link generation, tracking, and commission calculations
 
 ## Data Models
 - **Users**: Basic user management with username, email, password
 - **Projects**: Store build projects with status tracking, product data, generated content, and build logs
 - **Templates**: Store theme templates with configuration options
+- **ShopifyStores**: OAuth tokens and store connections with commission tracking
+- **Referrals**: Referral link tracking with conversion metrics and revenue data
 
 ## Database Integration
 - **ORM**: Drizzle ORM configured for PostgreSQL with migrations support
