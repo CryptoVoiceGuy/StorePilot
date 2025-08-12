@@ -122,69 +122,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Test Shopify Partner API connection
   app.get("/api/test-shopify", async (req, res) => {
-    const apiKey = process.env.SHOPIFY_PARTNER_API_KEY;
-    const apiSecret = process.env.SHOPIFY_PARTNER_API_SECRET;
-    const orgId = process.env.SHOPIFY_PARTNER_ORG_ID;
-
-    if (!apiKey || !apiSecret || !orgId) {
-      return res.json({
-        success: false,
-        error: "Shopify Partner API credentials not configured",
-        details: {
-          hasApiKey: !!apiKey,
-          hasApiSecret: !!apiSecret,
-          hasOrgId: !!orgId
-        }
-      });
-    }
-
     try {
-      const query = `
-        query {
-          currentAppInstallation {
-            app {
-              id
-              title
-            }
-          }
-        }
-      `;
-
-      const response = await fetch(`https://partners.shopify.com/${orgId}/api/2023-07/graphql.json`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': apiSecret,
-        },
-        body: JSON.stringify({ query }),
-      });
-
-      const result = await response.json();
-
-      if (result.errors) {
-        return res.json({
-          success: false,
-          error: result.errors[0]?.message || "API error",
-          details: {
-            status: response.status,
-            errors: result.errors,
-            message: "Authentication failed. You need a Partner API App with proper access token, not a Custom App."
-          }
-        });
-      }
-
-      res.json({
-        success: true,
-        message: "Shopify Partner API connection successful",
-        details: result.data
-      });
-
+      const shopifyService = new ShopifyService();
+      const result = await shopifyService.testConnection();
+      res.json(result);
     } catch (error) {
       res.json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         details: {
-          message: "Connection failed. Check API credentials and network connectivity."
+          message: "Shopify service test failed. Please check your Partner API configuration."
         }
       });
     }

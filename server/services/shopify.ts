@@ -53,7 +53,7 @@ export class ShopifyService {
       throw new Error('Shopify Partner API credentials not configured');
     }
 
-    const response = await fetch('https://partners.shopify.com/api/graphql', {
+    const response = await fetch(`https://partners.shopify.com/${this.orgId}/api/2025-04/graphql.json`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,6 +70,80 @@ export class ShopifyService {
     }
 
     return response.json();
+  }
+
+  async testConnection(): Promise<{ success: boolean; error?: string; data?: any }> {
+    if (!this.apiKey || !this.apiSecret || !this.orgId) {
+      return {
+        success: false,
+        error: 'Missing Shopify Partner API credentials'
+      };
+    }
+
+    try {
+      const response = await fetch(`https://partners.shopify.com/${this.orgId}/api/2025-04/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': this.apiSecret,
+        },
+        body: JSON.stringify({
+          query: `
+            query {
+              transactions(first: 1) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+            }
+          `
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText} - ${errorText}`
+        };
+      }
+
+      const data = await response.json();
+      
+      if (data.errors) {
+        return {
+          success: false,
+          error: `GraphQL errors: ${data.errors.map((e: any) => e.message).join(', ')}`
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          message: "Partner API connection successful!",
+          organizationId: this.orgId,
+          capabilities: [
+            "✅ Partner API authenticated",
+            "✅ Can access partner data and financial information",
+            "❌ Development store creation requires manual Partner Dashboard process",
+            "✅ Can configure stores after manual creation via Admin API"
+          ],
+          nextSteps: [
+            "Create development stores manually in Partner Dashboard",
+            "Use Admin API to configure stores programmatically", 
+            "Transfer completed stores to customers"
+          ]
+        }
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   }
 
   async createDevelopmentStore(
