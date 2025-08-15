@@ -145,43 +145,79 @@ export class AIContentGenerator {
       console.log('Starting image generation for product:', productTitle);
       console.log('Available images:', productData.images);
       
-      if (!productData.images || productData.images.length === 0) {
-        console.log('No reference images available');
-        return [];
-      }
-
       const generatedImageUrls: string[] = [];
 
-      // Generate multiple images using your exact ChatGPT-5 prompt
-      for (let i = 0; i < 3; i++) { // Generate up to 3 images
-        try {
-          console.log(`Generating image ${i + 1} of 3`);
-          const imageUrl = await this.generateImageWithChatGPT(productData.images[0], '');
-          if (imageUrl) {
-            console.log(`Successfully generated image ${i + 1}:`, imageUrl);
-            generatedImageUrls.push(imageUrl);
-          } else {
-            console.log(`Failed to generate image ${i + 1}`);
+      // If we have reference images, use them with your exact prompt
+      if (productData.images && productData.images.length > 0 && !productData.images[0].includes('placeholder')) {
+        console.log('Using reference images for generation');
+        
+        // Generate multiple images using your exact ChatGPT-5 prompt with reference
+        for (let i = 0; i < 3; i++) {
+          try {
+            console.log(`Generating image ${i + 1} of 3 with reference`);
+            const imageUrl = await this.generateImageWithChatGPT(productData.images[0], '');
+            if (imageUrl) {
+              console.log(`Successfully generated image ${i + 1}:`, imageUrl);
+              generatedImageUrls.push(imageUrl);
+            }
+          } catch (imageError) {
+            console.error(`Individual image generation ${i + 1} failed:`, imageError);
           }
-        } catch (imageError) {
-          console.error(`Individual image generation ${i + 1} failed:`, imageError);
-          // Continue with other images even if one fails
+        }
+      } else {
+        console.log('No reference images available, generating from product description');
+        
+        // Generate images without reference using product description
+        for (let i = 0; i < 3; i++) {
+          try {
+            console.log(`Generating image ${i + 1} of 3 from description`);
+            const imageUrl = await this.generateImageFromDescription(productTitle, productData.description);
+            if (imageUrl) {
+              console.log(`Successfully generated image ${i + 1}:`, imageUrl);
+              generatedImageUrls.push(imageUrl);
+            }
+          } catch (imageError) {
+            console.error(`Individual image generation ${i + 1} failed:`, imageError);
+          }
         }
       }
 
       console.log(`Generated ${generatedImageUrls.length} images out of 3 attempts`);
 
-      // If we generated any images, use them; otherwise fall back to original images
-      if (generatedImageUrls.length > 0) {
-        return generatedImageUrls;
-      } else {
-        console.log('No images were generated, using original images as fallback');
-        return productData.images;
-      }
+      // Return generated images if any, otherwise return original images
+      return generatedImageUrls.length > 0 ? generatedImageUrls : productData.images;
     } catch (error) {
       console.error('Image generation process failed:', error);
-      // Return scraped images as fallback to avoid wrong products
       return productData.images;
+    }
+  }
+
+  async generateImageFromDescription(productTitle: string, description: string): Promise<string | null> {
+    try {
+      // Create a professional advertisement image using your exact methodology but with text description
+      const exactPrompt = `Act as an advertising executive and create a professional advertisement for "${productTitle}". Product details: ${description}. The image should be high studio quality and would be considered to be done by a professional charging $1000 per hour. Professional product photography with clean white background, commercial lighting, premium e-commerce style.`;
+
+      console.log('Generating image from description with prompt:', exactPrompt);
+
+      const imageGenResponse = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: exactPrompt,
+        size: "1024x1024",
+        quality: "hd",
+        style: "natural",
+        n: 1,
+      });
+
+      if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
+        console.log('Generated image from description:', imageGenResponse.data[0].url);
+        return imageGenResponse.data[0].url;
+      }
+
+      return null;
+      
+    } catch (error) {
+      console.error('Image generation from description failed:', error);
+      return null;
     }
   }
 
