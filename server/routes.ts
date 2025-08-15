@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate store name suggestions from product data
-      const storeNameSuggestions = project.generatedContent?.brandName ? 
+      const storeNameSuggestions = (project.generatedContent as any)?.brandName ? 
         referralService.generateStoreNameSuggestions(project) : 
         [`store-${Date.now()}`];
       
@@ -435,14 +435,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Configure store with product data
       if (project.productData && project.generatedContent) {
         // Create product
+        const generatedContent = project.generatedContent as any;
+        const productData = project.productData as any;
+        
         await apiClient.createProduct({
-          title: project.generatedContent.productTitle,
-          body_html: project.generatedContent.productDescription,
-          vendor: project.generatedContent.brandName,
-          product_type: project.productData.category,
-          images: project.productData.images?.map((url: string) => ({ src: url })),
+          title: generatedContent.productTitle,
+          body_html: generatedContent.productDescription,
+          vendor: generatedContent.brandName,
+          product_type: productData.category,
+          images: productData.images?.map((url: string) => ({ src: url })),
           variants: [{
-            price: project.productData.price?.replace('$', ''),
+            price: productData.price?.replace('$', ''),
             inventory_quantity: 100,
             inventory_management: 'shopify',
           }],

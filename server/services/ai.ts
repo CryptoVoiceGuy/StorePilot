@@ -142,36 +142,44 @@ export class AIContentGenerator {
 
   async generateProductImages(productData: ProductData, productTitle: string): Promise<string[]> {
     try {
-      // First, analyze the scraped images to understand what the product actually looks like
-      const productDescription = await this.analyzeProductImages(productData.images, productTitle);
+      console.log('Starting image generation for product:', productTitle);
+      console.log('Available images:', productData.images);
       
-      if (!productDescription) {
-        // If analysis fails, return original images to avoid generating wrong products
-        console.log('Image analysis failed, using original images to avoid product mismatch');
-        return productData.images;
+      if (!productData.images || productData.images.length === 0) {
+        console.log('No reference images available');
+        return [];
       }
 
-      // Create precise prompts based on the actual product analysis
-      const imagePrompts = this.createPreciseImagePrompts(productDescription, productTitle);
       const generatedImageUrls: string[] = [];
 
-      // Generate multiple images using GPT-4o with /create command
-      for (const prompt of imagePrompts.slice(0, 3)) { // Generate up to 3 images
+      // Generate multiple images using your exact ChatGPT-5 prompt
+      for (let i = 0; i < 3; i++) { // Generate up to 3 images
         try {
-          const imageUrl = await this.generateImageWithChatGPT(productData.images[0], prompt);
+          console.log(`Generating image ${i + 1} of 3`);
+          const imageUrl = await this.generateImageWithChatGPT(productData.images[0], '');
           if (imageUrl) {
+            console.log(`Successfully generated image ${i + 1}:`, imageUrl);
             generatedImageUrls.push(imageUrl);
+          } else {
+            console.log(`Failed to generate image ${i + 1}`);
           }
         } catch (imageError) {
-          console.error('Individual image generation failed:', imageError);
+          console.error(`Individual image generation ${i + 1} failed:`, imageError);
           // Continue with other images even if one fails
         }
       }
 
-      // If no images were generated, return the scraped images as fallback
-      return generatedImageUrls.length > 0 ? generatedImageUrls : productData.images;
+      console.log(`Generated ${generatedImageUrls.length} images out of 3 attempts`);
+
+      // If we generated any images, use them; otherwise fall back to original images
+      if (generatedImageUrls.length > 0) {
+        return generatedImageUrls;
+      } else {
+        console.log('No images were generated, using original images as fallback');
+        return productData.images;
+      }
     } catch (error) {
-      console.error('Image generation failed:', error);
+      console.error('Image generation process failed:', error);
       // Return scraped images as fallback to avoid wrong products
       return productData.images;
     }
@@ -179,12 +187,17 @@ export class AIContentGenerator {
 
   async analyzeProductImages(imageUrls: string[], productTitle: string): Promise<string | null> {
     try {
+      console.log('Starting image analysis for product:', productTitle);
+      console.log('Image URLs:', imageUrls);
+      
       if (!imageUrls || imageUrls.length === 0) {
+        console.log('No image URLs provided for analysis');
         return null;
       }
 
       // Use the first available image for analysis
       const imageUrl = imageUrls[0];
+      console.log('Analyzing image URL:', imageUrl);
       
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -212,17 +225,26 @@ export class AIContentGenerator {
         max_tokens: 500,
       });
 
-      return response.choices[0].message.content;
+      const analysis = response.choices[0].message.content;
+      console.log('Image analysis result:', analysis);
+      return analysis;
     } catch (error) {
       console.error('Product image analysis failed:', error);
+      if (error instanceof Error) {
+        console.error('Analysis error details:', error.message);
+      }
       return null;
     }
   }
 
   async generateImageWithChatGPT(referenceImageUrl: string, prompt: string): Promise<string | null> {
     try {
+      console.log('Starting image generation with reference URL:', referenceImageUrl);
+      
       // Use your exact prompt methodology
       const exactPrompt = "Act as an advertising executive and re create this advert. Keep the product in this image the exact same and come up with a new advertisment. The image is to be high studio quality and would be considered to be done by a professional charging $1000 per hour";
+
+      console.log('Using exact prompt:', exactPrompt);
 
       // Generate the image using DALL-E 3 with your exact prompt
       const imageGenResponse = await openai.images.generate({
@@ -234,14 +256,21 @@ export class AIContentGenerator {
         n: 1,
       });
 
+      console.log('Image generation response:', imageGenResponse.data);
+
       if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
+        console.log('Generated image URL:', imageGenResponse.data[0].url);
         return imageGenResponse.data[0].url;
       }
 
+      console.log('No image URL in response');
       return null;
       
     } catch (error) {
       console.error('ChatGPT-5 style image generation failed:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+      }
       return null;
     }
   }
