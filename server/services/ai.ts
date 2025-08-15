@@ -142,8 +142,17 @@ export class AIContentGenerator {
 
   async generateProductImages(productData: ProductData, productTitle: string): Promise<string[]> {
     try {
-      // Create descriptive prompts for the AI to generate high-quality product images
-      const imagePrompts = this.createImagePrompts(productData, productTitle);
+      // First, analyze the scraped images to understand what the product actually looks like
+      const productDescription = await this.analyzeProductImages(productData.images, productTitle);
+      
+      if (!productDescription) {
+        // If analysis fails, return original images to avoid generating wrong products
+        console.log('Image analysis failed, using original images to avoid product mismatch');
+        return productData.images;
+      }
+
+      // Create precise prompts based on the actual product analysis
+      const imagePrompts = this.createPreciseImagePrompts(productDescription, productTitle);
       const generatedImageUrls: string[] = [];
 
       // Generate multiple images for variety
@@ -170,9 +179,63 @@ export class AIContentGenerator {
       return generatedImageUrls.length > 0 ? generatedImageUrls : productData.images;
     } catch (error) {
       console.error('Image generation failed:', error);
-      // Return scraped images as fallback
+      // Return scraped images as fallback to avoid wrong products
       return productData.images;
     }
+  }
+
+  async analyzeProductImages(imageUrls: string[], productTitle: string): Promise<string | null> {
+    try {
+      if (!imageUrls || imageUrls.length === 0) {
+        return null;
+      }
+
+      // Use the first available image for analysis
+      const imageUrl = imageUrls[0];
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a product photography expert. Analyze this product image and provide a detailed, accurate description of what you see. Focus on the actual physical product, its shape, color, materials, design details, and any visible features. Be precise and factual."
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Analyze this product image for "${productTitle}" and describe exactly what the product looks like. Include: shape, size, color, materials, design elements, any buttons/ports/features, packaging if visible. Be very specific and accurate.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 500,
+      });
+
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('Product image analysis failed:', error);
+      return null;
+    }
+  }
+
+  private createPreciseImagePrompts(productDescription: string, productTitle: string): string[] {
+    const baseInstruction = `Create a professional product photograph of the exact same product: ${productTitle}. Important: The product must look identical to this description: ${productDescription}`;
+    
+    return [
+      `${baseInstruction}. Studio photography with clean white background, professional lighting, commercial product shot, high resolution, exactly matching the described appearance`,
+      `${baseInstruction}. Lifestyle photography showing the product in natural use, soft natural lighting, keeping the exact same product design and appearance`,
+      `${baseInstruction}. Premium product photography with soft shadows and modern composition, clean background, emphasizing quality while maintaining identical product features`,
+      `${baseInstruction}. 45-degree angle view, professional studio setup, optimal lighting to showcase the exact same product design and materials`,
+      `${baseInstruction}. Commercial e-commerce photography, professional lighting, clean presentation, showing the identical product from the best angle`
+    ];
   }
 
   private createImagePrompts(productData: ProductData, productTitle: string): string[] {
