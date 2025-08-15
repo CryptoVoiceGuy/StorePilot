@@ -155,19 +155,12 @@ export class AIContentGenerator {
       const imagePrompts = this.createPreciseImagePrompts(productDescription, productTitle);
       const generatedImageUrls: string[] = [];
 
-      // Generate multiple images for variety
+      // Generate multiple images using GPT-4o with /create command
       for (const prompt of imagePrompts.slice(0, 3)) { // Generate up to 3 images
         try {
-          const response = await openai.images.generate({
-            model: "dall-e-3",
-            prompt: prompt,
-            size: "1024x1024",
-            quality: "standard",
-            n: 1,
-          });
-
-          if (response.data && response.data[0]?.url) {
-            generatedImageUrls.push(response.data[0].url);
+          const imageUrl = await this.generateImageWithChatGPT(productData.images[0], prompt);
+          if (imageUrl) {
+            generatedImageUrls.push(imageUrl);
           }
         } catch (imageError) {
           console.error('Individual image generation failed:', imageError);
@@ -226,15 +219,57 @@ export class AIContentGenerator {
     }
   }
 
+  async generateImageWithChatGPT(referenceImageUrl: string, prompt: string): Promise<string | null> {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional product photographer. Use the /create command to generate new high-quality product images based on the reference image and instructions provided. The new image should show the exact same product with improved photography."
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `/create ${prompt}. Base this on the reference image I'm providing - keep the product identical but improve the photography quality, lighting, and composition.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: referenceImageUrl
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const content = response.choices[0].message.content;
+      
+      // Parse the response to extract generated image URL
+      // Note: This assumes GPT-4o returns image URLs in its response when using /create
+      // The actual implementation may need adjustment based on how GPT-4o handles /create
+      const imageUrlMatch = content?.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|webp)/i);
+      return imageUrlMatch ? imageUrlMatch[0] : null;
+      
+    } catch (error) {
+      console.error('ChatGPT image generation failed:', error);
+      return null;
+    }
+  }
+
   private createPreciseImagePrompts(productDescription: string, productTitle: string): string[] {
-    const baseInstruction = `Create a professional product photograph of the exact same product: ${productTitle}. Important: The product must look identical to this description: ${productDescription}`;
+    const baseInstruction = `Professional product photograph of the exact same product: ${productTitle}. Product details: ${productDescription}`;
     
     return [
-      `${baseInstruction}. Studio photography with clean white background, professional lighting, commercial product shot, high resolution, exactly matching the described appearance`,
-      `${baseInstruction}. Lifestyle photography showing the product in natural use, soft natural lighting, keeping the exact same product design and appearance`,
-      `${baseInstruction}. Premium product photography with soft shadows and modern composition, clean background, emphasizing quality while maintaining identical product features`,
-      `${baseInstruction}. 45-degree angle view, professional studio setup, optimal lighting to showcase the exact same product design and materials`,
-      `${baseInstruction}. Commercial e-commerce photography, professional lighting, clean presentation, showing the identical product from the best angle`
+      `${baseInstruction}. Studio photography with clean white background, professional lighting, commercial product shot, high resolution`,
+      `${baseInstruction}. Lifestyle photography showing the product in natural use, soft natural lighting, professional e-commerce style`,
+      `${baseInstruction}. Premium product photography with soft shadows and modern composition, clean background, emphasizing quality`,
+      `${baseInstruction}. 45-degree angle view, professional studio setup, optimal lighting to showcase the product design`,
+      `${baseInstruction}. Commercial e-commerce photography, professional lighting, clean presentation, showing the product from the best angle`
     ];
   }
 
