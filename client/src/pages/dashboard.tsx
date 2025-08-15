@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,8 @@ import {
   Eye,
   Settings,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -32,6 +34,26 @@ export default function Dashboard() {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+
+  const deleteStoreMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      return apiRequest("DELETE", `/api/projects/${projectId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      refetch();
+    },
+  });
+
+  const handleDeleteStore = async (projectId: string, storeName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${storeName}"? This action cannot be undone.`)) {
+      try {
+        await deleteStoreMutation.mutateAsync(projectId);
+      } catch (error) {
+        alert("Failed to delete store. Please try again.");
+      }
+    }
+  };
 
   // Auto-refresh projects every 10 seconds to show new stores
   useEffect(() => {
@@ -160,31 +182,45 @@ export default function Dashboard() {
                             {new Date(project.createdAt).toLocaleDateString()}
                           </span>
                           
-                          {project.status === "completed" && project.shopifyUrl && (
-                            <div className="flex space-x-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(project.shopifyUrl, '_blank');
-                                }}
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                              <Link href={`/store/${project.id}`}>
+                          <div className="flex space-x-1">
+                            {project.status === "completed" && project.shopifyUrl && (
+                              <>
                                 <Button
                                   size="sm"
-                                  variant="ghost" 
+                                  variant="ghost"
                                   className="h-6 w-6 p-0"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(project.shopifyUrl, '_blank');
+                                  }}
                                 >
-                                  <Eye className="h-3 w-3" />
+                                  <ExternalLink className="h-3 w-3" />
                                 </Button>
-                              </Link>
-                            </div>
-                          )}
+                                <Link href={`/store/${project.id}`}>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost" 
+                                    className="h-6 w-6 p-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </Link>
+                              </>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteStore(project.id, project.storeName || 'Untitled Store');
+                              }}
+                              disabled={deleteStoreMutation.isPending}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}

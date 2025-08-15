@@ -19,6 +19,7 @@ export interface IStorage {
   getProjectsByUser(userId: string): Promise<Project[]>;
   createProject(project: InsertProject & { userId: string }): Promise<Project>;
   updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined>;
+  deleteProject(id: string): Promise<boolean>;
   
   // Templates
   getTemplate(id: string): Promise<Template | undefined>;
@@ -204,6 +205,10 @@ export class MemStorage implements IStorage {
     };
     this.projects.set(id, updatedProject);
     return updatedProject;
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    return this.projects.delete(id);
   }
 
   // Templates

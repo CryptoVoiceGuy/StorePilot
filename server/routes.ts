@@ -122,6 +122,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/projects/:id", async (req, res) => {
+    try {
+      const projectId = req.params.id;
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Check if project belongs to the demo user (in a real app, check authenticated user)
+      if (project.userId !== "demo-user") {
+        return res.status(403).json({ error: "Unauthorized to delete this project" });
+      }
+
+      const deleted = await storage.deleteProject(projectId);
+      
+      if (deleted) {
+        res.json({ success: true, message: "Store deleted successfully" });
+      } else {
+        res.status(500).json({ error: "Failed to delete store" });
+      }
+    } catch (error) {
+      console.error("Delete project error:", error);
+      res.status(500).json({ error: "Failed to delete store" });
+    }
+  });
+
   // Test Shopify Partner API connection
   app.get("/api/test-shopify", async (req, res) => {
     try {
