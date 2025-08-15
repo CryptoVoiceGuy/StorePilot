@@ -258,7 +258,7 @@ export class ShopifyService {
           inventory: 100,
         }
       ],
-      images: productData.images.map(img => ({
+      images: content.generatedImages.map(img => ({
         src: img,
         alt: content.productTitle,
       })),

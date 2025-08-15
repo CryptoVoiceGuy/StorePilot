@@ -13,7 +13,7 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
     title: generatedContent?.productTitle || productData?.title || "Premium Wireless Earbuds with ANC",
     price: productData?.price || "$79.99",
     originalPrice: "$129.99",
-    images: productData?.images?.[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?ixlib=rb-4.0.3&w=800&h=600&fit=crop",
+    images: generatedContent?.generatedImages?.[0] || productData?.images?.[0] || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?ixlib=rb-4.0.3&w=800&h=600&fit=crop",
     brand: generatedContent?.brandName || productData?.brand || "AudioWave Pro",
     features: generatedContent?.features || productData?.features?.slice(0, 3) || [
       "Active Noise Cancellation",

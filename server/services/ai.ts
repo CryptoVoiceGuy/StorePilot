@@ -21,6 +21,7 @@ export interface GeneratedContent {
   heroHeadline: string;
   heroSubheadline: string;
   callToAction: string;
+  generatedImages: string[]; // URLs to AI-generated product images
 }
 
 export class AIContentGenerator {
@@ -79,6 +80,9 @@ export class AIContentGenerator {
 
       const content = JSON.parse(response.choices[0].message.content!);
       
+      // Generate high-quality product images
+      const generatedImages = await this.generateProductImages(productData, content.productTitle || productData.title);
+      
       // Validate and set defaults if needed
       return {
         productTitle: content.productTitle || productData.title,
@@ -95,7 +99,8 @@ export class AIContentGenerator {
         },
         heroHeadline: content.heroHeadline || `Transform Your Life with ${content.productTitle}`,
         heroSubheadline: content.heroSubheadline || "Premium quality, unbeatable value, fast delivery.",
-        callToAction: content.callToAction || "Order Now"
+        callToAction: content.callToAction || "Order Now",
+        generatedImages: generatedImages
       };
     } catch (error) {
       console.error('AI content generation failed:', error);
@@ -130,8 +135,58 @@ export class AIContentGenerator {
       },
       heroHeadline: `Get Your ${productData.title} Today`,
       heroSubheadline: "Premium quality, fast delivery, satisfaction guaranteed.",
-      callToAction: "Buy Now"
+      callToAction: "Buy Now",
+      generatedImages: productData.images // Use scraped images as fallback
     };
+  }
+
+  async generateProductImages(productData: ProductData, productTitle: string): Promise<string[]> {
+    try {
+      // Create descriptive prompts for the AI to generate high-quality product images
+      const imagePrompts = this.createImagePrompts(productData, productTitle);
+      const generatedImageUrls: string[] = [];
+
+      // Generate multiple images for variety
+      for (const prompt of imagePrompts.slice(0, 3)) { // Generate up to 3 images
+        try {
+          const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: prompt,
+            size: "1024x1024",
+            quality: "standard",
+            n: 1,
+          });
+
+          if (response.data && response.data[0]?.url) {
+            generatedImageUrls.push(response.data[0].url);
+          }
+        } catch (imageError) {
+          console.error('Individual image generation failed:', imageError);
+          // Continue with other images even if one fails
+        }
+      }
+
+      // If no images were generated, return the scraped images as fallback
+      return generatedImageUrls.length > 0 ? generatedImageUrls : productData.images;
+    } catch (error) {
+      console.error('Image generation failed:', error);
+      // Return scraped images as fallback
+      return productData.images;
+    }
+  }
+
+  private createImagePrompts(productData: ProductData, productTitle: string): string[] {
+    const baseDescription = `Professional product photography of ${productTitle}`;
+    const features = productData.features.slice(0, 3).join(', ');
+    const category = productData.category || 'product';
+    
+    return [
+      `${baseDescription}, clean white background, studio lighting, high-resolution, commercial photography style, ${features}`,
+      `${baseDescription}, lifestyle setting, natural lighting, professional e-commerce product shot, showing the product in use`,
+      `${baseDescription}, modern minimalist composition, soft shadows, premium product photography, emphasizing quality and design`,
+      `${baseDescription}, 45-degree angle view, professional studio setup, clean background, highlighting key features: ${features}`,
+      `${baseDescription}, ${category} product shot, commercial photography, optimal lighting to showcase texture and materials`
+    ];
   }
 
   async generateProductVariations(productData: ProductData): Promise<string[]> {
