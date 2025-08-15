@@ -221,70 +221,13 @@ export class AIContentGenerator {
 
   async generateImageWithChatGPT(referenceImageUrl: string, prompt: string): Promise<string | null> {
     try {
-      // Step 1: Analyze the reference image first
-      const analysisResponse = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert product photographer and image analyst. Analyze this product image and provide detailed specifications for recreating it with professional photography."
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analyze this product image and describe: 1) Product type and specific details, 2) Current lighting setup, 3) Background and composition, 4) Color palette, 5) Angles and positioning. Be extremely detailed and specific."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: referenceImageUrl
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 800,
-      });
+      // Use your exact prompt methodology
+      const exactPrompt = "Act as an advertising executive and re create this advert. Keep the product in this image the exact same and come up with a new advertisment. The image is to be high studio quality and would be considered to be done by a professional charging $1000 per hour";
 
-      const analysis = analysisResponse.choices[0].message.content;
-
-      // Step 2: Use the analysis to create a precise image generation prompt
-      const precisePrompt = this.createPreciseImagePrompt(analysis, prompt);
-
-      // Step 3: Generate the image using ChatGPT-5's create function approach
-      const imageResponse = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are ChatGPT-5 with image creation capabilities. When I say '/create', generate a high-quality product image following the exact specifications provided. The output should be a professional product photograph that maintains product accuracy while improving visual quality."
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `/create ${precisePrompt}`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: referenceImageUrl
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-      });
-
-      // For now, since OpenAI's API doesn't directly return generated images through chat completions,
-      // we'll use DALL-E 3 with the precise prompt created from the analysis
+      // Generate the image using DALL-E 3 with your exact prompt
       const imageGenResponse = await openai.images.generate({
         model: "dall-e-3",
-        prompt: precisePrompt,
+        prompt: exactPrompt,
         size: "1024x1024",
         quality: "hd",
         style: "natural",
@@ -301,26 +244,6 @@ export class AIContentGenerator {
       console.error('ChatGPT-5 style image generation failed:', error);
       return null;
     }
-  }
-
-  private createPreciseImagePrompt(analysis: string | null, basePrompt: string): string {
-    if (!analysis) {
-      return basePrompt;
-    }
-
-    return `Professional product photography based on this analysis: ${analysis}. 
-    
-    Create an image that: 
-    1) Shows the EXACT same product with identical design, colors, and features
-    2) Uses professional studio lighting with clean, even illumination
-    3) Has a clean white or neutral background suitable for e-commerce
-    4) Maintains the product's authentic proportions and details
-    5) Uses high-quality commercial photography techniques
-    6) Keeps all branding, text, and design elements identical to the original
-    
-    Photography specifications: ${basePrompt}
-    
-    CRITICAL: The product must be identical to the analyzed image - only improve the photography quality, lighting, and background while keeping the product exactly the same.`;
   }
 
   private createPreciseImagePrompts(productDescription: string, productTitle: string): string[] {
