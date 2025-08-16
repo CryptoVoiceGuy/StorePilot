@@ -10,10 +10,10 @@ const premiumOpenai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY_PREMIUM || process.env.OPENAI_API_KEY || "default_key" 
 });
 
-// DALL-E 3 COMPLETELY REMOVED - Never use AI image generation
-// const imageOpenai = new OpenAI({ 
-//   apiKey: process.env.OPENAI_API_KEY_IMAGES || process.env.OPENAI_API_KEY || "default_key" 
-// });
+// GPT Image 1 API instance for image generation
+const imageOpenai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY_IMAGES || process.env.OPENAI_API_KEY || "default_key" 
+});
 
 export interface GeneratedContent {
   productTitle: string;
@@ -32,7 +32,7 @@ export interface GeneratedContent {
   heroSubheadline: string;
   callToAction: string;
   generatedImages: string[]; // URLs to authentic product images
-  advertisementConcepts?: string[]; // Professional advertisement concepts from GPT-4o
+  advertisementConcepts?: string[]; // Professional advertisement images from GPT Image 1
 }
 
 export interface PremiumThemeInputs {
@@ -181,8 +181,8 @@ export class AIContentGenerator {
         heroHeadline: content.heroHeadline || `Transform Your Life with ${content.productTitle}`,
         heroSubheadline: content.heroSubheadline || "Premium quality, unbeatable value, fast delivery.",
         callToAction: content.callToAction || "Order Now",
-        generatedImages: productData.images, // Use original authentic images
-        advertisementConcepts: advertisementConcepts // Professional ad concepts from GPT-4o
+        generatedImages: productData.images.concat(advertisementConcepts.filter(url => url && url.startsWith('http'))), // Original + generated images
+        advertisementConcepts: advertisementConcepts // Professional ad images from GPT Image 1
       };
     } catch (error) {
       console.error('AI content generation failed:', error);
@@ -591,10 +591,11 @@ export class AIContentGenerator {
 
   async generateProfessionalAdvertisement(imageUrl: string, productTitle: string): Promise<string | null> {
     try {
-      console.log('Creating professional advertisement concept with GPT-4o vision...');
+      console.log('Creating professional advertisement image with GPT Image 1...');
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      // First, analyze the original image with GPT-4o
+      const analysisResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
         messages: [
           {
             role: "user",
@@ -615,9 +616,26 @@ export class AIContentGenerator {
         max_tokens: 1000,
       });
 
-      const advertisementConcept = response.choices[0].message.content;
-      console.log('Professional advertisement concept created:', advertisementConcept);
-      return advertisementConcept;
+      const advertisementConcept = analysisResponse.choices[0].message.content;
+      console.log('Advertisement concept created:', advertisementConcept);
+
+      // Now generate the actual image using gpt-image-1
+      const imageResponse = await imageOpenai.images.generate({
+        model: "gpt-image-1",
+        prompt: advertisementConcept || `Professional $1000/hour quality advertisement for ${productTitle}. High-end commercial photography, studio lighting, premium presentation.`,
+        n: 1,
+        size: "1024x1024",
+        quality: "high",
+      });
+
+      const generatedImageUrl = imageResponse.data?.[0]?.url;
+      if (generatedImageUrl) {
+        console.log('Professional advertisement image generated:', generatedImageUrl);
+        return generatedImageUrl;
+      } else {
+        console.log('No image URL returned from GPT Image 1');
+        return null;
+      }
     } catch (error) {
       console.error('Professional advertisement generation failed:', error);
       if (error instanceof Error) {
