@@ -267,17 +267,18 @@ export class AIContentGenerator {
       const detailedPrompt = analysisResponse.choices[0].message.content;
       console.log('GPT-5 created detailed prompt:', detailedPrompt);
 
-      // Create a fallback professional prompt if GPT-5 doesn't provide one
-      const finalPrompt = detailedPrompt && detailedPrompt.trim() 
-        ? detailedPrompt 
-        : `Professional high-end product photography of ${prompt}, studio lighting, clean white background, commercial quality shot worth $1000/hour, ultra-high resolution, professional e-commerce photography, perfect lighting and composition`;
+      // Fail if GPT-5 doesn't provide a proper prompt - no fallbacks
+      if (!detailedPrompt || !detailedPrompt.trim()) {
+        console.error('GPT-5 failed to create image prompt - received empty response');
+        throw new Error('GPT-5 image analysis failed: No prompt generated');
+      }
 
-      console.log('Using final prompt for GPT Image 1:', finalPrompt);
+      console.log('Using GPT-5 generated prompt for GPT Image 1:', detailedPrompt);
 
       // Now use GPT Image 1 for actual image generation
       const imageGenResponse = await openai.images.generate({
         model: "gpt-image-1", // Use GPT Image 1 for generation
-        prompt: finalPrompt,
+        prompt: detailedPrompt,
         size: "1024x1024",
         quality: "high", // Fixed: use 'high' instead of 'standard'
         n: 1,
