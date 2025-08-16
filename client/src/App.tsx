@@ -11,6 +11,7 @@ import ShopifyStatus from "@/pages/shopify-status";
 import ShopifySetupGuide from "@/pages/shopify-setup-guide";
 import GenerateTokenGuide from "@/pages/generate-token-guide";
 import PartnerAPIClientGuide from "@/pages/partner-api-client-guide";
+import PremiumThemeTest from "@/pages/premium-theme-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/shopify-setup-guide" component={ShopifySetupGuide} />
       <Route path="/generate-token" component={GenerateTokenGuide} />
       <Route path="/partner-api-client" component={PartnerAPIClientGuide} />
+      <Route path="/premium-theme-test" component={PremiumThemeTest} />
       <Route component={NotFound} />
     </Switch>
   );

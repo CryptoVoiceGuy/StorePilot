@@ -166,6 +166,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Premium theme design endpoint
+  app.post("/api/premium-theme", async (req, res) => {
+    try {
+      const { 
+        product_url, 
+        product_title, 
+        product_category, 
+        raw_text, 
+        image_captions, 
+        target_market, 
+        currency 
+      } = req.body;
+
+      // Validate required inputs
+      if (!product_url || !product_title || !product_category || !raw_text) {
+        return res.status(400).json({ 
+          error: "Missing required fields: product_url, product_title, product_category, raw_text" 
+        });
+      }
+
+      // Generate premium theme design
+      const themeDesign = await aiGenerator.generatePremiumTheme({
+        product_url,
+        product_title,
+        product_category,
+        raw_text,
+        image_captions: image_captions || [],
+        target_market: target_market || "US",
+        currency: currency || "USD"
+      });
+
+      // Return strict JSON only
+      res.setHeader('Content-Type', 'application/json');
+      res.json(themeDesign);
+    } catch (error) {
+      console.error("Premium theme generation error:", error);
+      res.status(500).json({ 
+        blocked: false,
+        blocked_reason: "",
+        style: { primary: "Modern Minimal", secondary: "Professional Clean", confidence: 0.75 },
+        theme: "Dawn",
+        palette: { primary: "#111111", accent_1: "#1F6FEB", accent_2: "#E6E6E6", background: "#FFFFFF" },
+        typography: { heading: "Geometric Sans", body: "System Sans" },
+        tone: "Clear and professional",
+        copy: {
+          hero: { headline: "Premium Quality Product", subhead: "Experience excellence in every detail", cta: "Shop now" },
+          bullets: ["High-quality materials", "Fast shipping", "30-day returns", "Expert support", "Trusted quality"],
+          description: "Experience the perfect blend of quality and value with our premium product. Designed with attention to detail and built to last.",
+          specs: ["Premium materials", "Durable construction", "Multiple sizes", "1-year warranty"],
+          faq: [
+            { q: "Shipping", a: "Free shipping on orders over $50. Standard delivery in 3-7 business days." },
+            { q: "Returns", a: "30-day money-back guarantee. Return for any reason within 30 days." },
+            { q: "Warranty", a: "1-year manufacturer warranty covering defects and normal wear." },
+            { q: "Compatibility", a: "Compatible with most standard applications. See specifications for details." }
+          ]
+        },
+        images: {
+          hero_prompt: "Professional product photography, clean white background, studio lighting",
+          gallery_prompts: ["Product in use lifestyle photography", "Close-up detail features", "Packaging and accessories"],
+          detail_prompts: ["Technical diagram components", "Size comparison chart"]
+        },
+        layout: { pdp_order: ["hero", "gallery", "bullets", "description", "specs", "faq", "trust"] },
+        proof: { badges: ["SSL secure", "30 day returns", "Fast shipping"] }
+      });
+    }
+  });
+
   // Async build function
   async function buildStoreAsync(projectId: string, params: any) {
     try {

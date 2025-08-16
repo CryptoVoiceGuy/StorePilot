@@ -24,6 +24,63 @@ export interface GeneratedContent {
   generatedImages: string[]; // URLs to AI-generated product images
 }
 
+export interface PremiumThemeInputs {
+  product_url: string;
+  product_title: string;
+  product_category: string;
+  raw_text: string;
+  image_captions: string[];
+  target_market: string; // Country code
+  currency: string;
+}
+
+export interface PremiumThemeDesign {
+  blocked: boolean;
+  blocked_reason: string;
+  style: {
+    primary: string;
+    secondary: string;
+    confidence: number;
+  };
+  theme: string;
+  palette: {
+    primary: string;
+    accent_1: string;
+    accent_2: string;
+    background: string;
+  };
+  typography: {
+    heading: string;
+    body: string;
+  };
+  tone: string;
+  copy: {
+    hero: {
+      headline: string;
+      subhead: string;
+      cta: string;
+    };
+    bullets: string[];
+    description: string;
+    specs: string[];
+    faq: Array<{
+      q: string;
+      a: string;
+    }>;
+  };
+  images: {
+    hero_prompt: string;
+    gallery_prompts: string[];
+    detail_prompts: string[];
+  };
+  layout: {
+    pdp_order: string[];
+  };
+  proof: {
+    badges: string[];
+  };
+}
+
 export class AIContentGenerator {
   async generateStoreContent(productData: ProductData, targetMarket: string = "US"): Promise<GeneratedContent> {
     try {
@@ -107,6 +164,305 @@ export class AIContentGenerator {
       
       // Return fallback content
       return this.getFallbackContent(productData);
+    }
+  }
+
+  async generatePremiumTheme(inputs: PremiumThemeInputs): Promise<PremiumThemeDesign> {
+    try {
+      // Style class mapping
+      const styleMapping = {
+        "Modern Minimal": "Dawn",
+        "Cozy Natural": "Origin", 
+        "Tech Futuristic": "Taste",
+        "Sport Performance": "Ride",
+        "Luxury Elegant": "Studio",
+        "Street Utility": "Origin",
+        "Playful Colorful": "Colorblock",
+        "Eco Rustic": "Origin",
+        "Professional Clean": "Refresh",
+        "Beauty Wellness": "Sense",
+        "Kitchen Home": "Crave",
+        "Pets Friendly": "Taste"
+      };
+
+      // Typography mapping
+      const typographyMapping = {
+        "Modern Minimal": { heading: "Geometric Sans", body: "System Sans" },
+        "Cozy Natural": { heading: "Serif", body: "Sans Serif" },
+        "Tech Futuristic": { heading: "Futura", body: "Geometric Sans" },
+        "Sport Performance": { heading: "Impact", body: "Sans Serif" },
+        "Luxury Elegant": { heading: "Serif", body: "Sans Serif" },
+        "Street Utility": { heading: "Bold Sans", body: "Sans Serif" },
+        "Playful Colorful": { heading: "Rounded Sans", body: "Rounded Sans" },
+        "Eco Rustic": { heading: "Slab Serif", body: "Sans Serif" },
+        "Professional Clean": { heading: "Sans Serif", body: "Sans Serif" },
+        "Beauty Wellness": { heading: "Script", body: "Sans Serif" },
+        "Kitchen Home": { heading: "Serif", body: "Sans Serif" },
+        "Pets Friendly": { heading: "Rounded Sans", body: "Sans Serif" }
+      };
+
+      // Tone mapping
+      const toneMapping = {
+        "Modern Minimal": "Short and direct",
+        "Cozy Natural": "Warm and simple",
+        "Tech Futuristic": "Spec-first and precise",
+        "Sport Performance": "Energetic and motivating",
+        "Luxury Elegant": "Refined and sophisticated",
+        "Street Utility": "Bold and authentic",
+        "Playful Colorful": "Fun and enthusiastic",
+        "Eco Rustic": "Natural and honest",
+        "Professional Clean": "Clear and trustworthy",
+        "Beauty Wellness": "Gentle and nurturing",
+        "Kitchen Home": "Practical and helpful",
+        "Pets Friendly": "Caring and playful"
+      };
+
+      // Check for prohibited content
+      const prohibitedSignals = [
+        'medical claim', 'prescription', 'cure', 'treatment', 'therapy',
+        'adult', 'vape', 'tobacco', 'weapon', 'firearm', 'cbd', 'drug'
+      ];
+      
+      const combinedText = `${inputs.product_title} ${inputs.raw_text} ${inputs.image_captions.join(' ')}`.toLowerCase();
+      const isBlocked = prohibitedSignals.some(signal => combinedText.includes(signal));
+
+      if (isBlocked) {
+        return {
+          blocked: true,
+          blocked_reason: "Product contains prohibited content (medical claims, adult content, weapons, or restricted substances)",
+          style: { primary: "", secondary: "", confidence: 0.0 },
+          theme: "",
+          palette: { primary: "#111111", accent_1: "#1F6FEB", accent_2: "#E6E6E6", background: "#FFFFFF" },
+          typography: { heading: "", body: "" },
+          tone: "",
+          copy: {
+            hero: { headline: "", subhead: "", cta: "Shop now" },
+            bullets: ["", "", "", "", ""],
+            description: "",
+            specs: [],
+            faq: [
+              { q: "Shipping", a: "" },
+              { q: "Returns", a: "" },
+              { q: "Warranty", a: "" },
+              { q: "Compatibility", a: "" }
+            ]
+          },
+          images: {
+            hero_prompt: "",
+            gallery_prompts: [],
+            detail_prompts: []
+          },
+          layout: {
+            pdp_order: ["hero", "gallery", "bullets", "description", "specs", "faq", "trust"]
+          },
+          proof: {
+            badges: ["SSL secure", "30 day returns", "Fast shipping"]
+          }
+        };
+      }
+
+      const prompt = `
+        Analyze this product and generate premium Shopify theme design worth $100,000. Extract key signals from materials, finish, audience, verbs, photography style, colors, and image descriptions.
+
+        Product Information:
+        - Title: ${inputs.product_title}
+        - Category: ${inputs.product_category}
+        - Description: ${inputs.raw_text}
+        - Image Captions: ${inputs.image_captions.join(', ')}
+        - Target Market: ${inputs.target_market}
+        - Currency: ${inputs.currency}
+
+        Style Classes Available: Modern Minimal, Cozy Natural, Tech Futuristic, Sport Performance, Luxury Elegant, Street Utility, Playful Colorful, Eco Rustic, Professional Clean, Beauty Wellness, Kitchen Home, Pets Friendly
+
+        Analyze the product signals and respond with ONLY valid JSON in this exact format:
+        {
+          "blocked": false,
+          "blocked_reason": "",
+          "style": {
+            "primary": "exact style class from list above",
+            "secondary": "secondary style class from list above", 
+            "confidence": 0.85
+          },
+          "theme": "free Shopify theme name",
+          "palette": {
+            "primary": "#111111",
+            "accent_1": "#1F6FEB", 
+            "accent_2": "#E6E6E6",
+            "background": "#FFFFFF"
+          },
+          "typography": {
+            "heading": "font family for headings",
+            "body": "font family for body text"
+          },
+          "tone": "tone description for copy",
+          "copy": {
+            "hero": {
+              "headline": "compelling 6-8 word headline",
+              "subhead": "supporting 12-15 word subheadline",
+              "cta": "Shop now"
+            },
+            "bullets": [
+              "benefit 1 (8-12 words)",
+              "benefit 2 (8-12 words)", 
+              "benefit 3 (8-12 words)",
+              "benefit 4 (8-12 words)",
+              "benefit 5 (8-12 words)"
+            ],
+            "description": "80-120 word product description focusing on benefits and value",
+            "specs": ["spec 1", "spec 2", "spec 3", "spec 4"],
+            "faq": [
+              {"q": "Shipping", "a": "detailed shipping answer"},
+              {"q": "Returns", "a": "detailed returns answer"},
+              {"q": "Warranty", "a": "detailed warranty answer"},
+              {"q": "Compatibility", "a": "detailed compatibility answer"}
+            ]
+          },
+          "images": {
+            "hero_prompt": "detailed prompt for hero image generation",
+            "gallery_prompts": ["prompt 1", "prompt 2", "prompt 3"],
+            "detail_prompts": ["detail prompt 1", "detail prompt 2"]
+          },
+          "layout": {
+            "pdp_order": ["hero", "gallery", "bullets", "description", "specs", "faq", "trust"]
+          },
+          "proof": {
+            "badges": ["SSL secure", "30 day returns", "Fast shipping"]
+          }
+        }
+      `;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert premium e-commerce designer specializing in $100,000+ Shopify theme designs. Analyze product signals to determine the perfect style class, extract color palettes from imagery descriptions, and create conversion-optimized copy. ONLY respond with valid JSON - no explanations or additional text."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+
+      const design = JSON.parse(response.choices[0].message.content!);
+      
+      // Apply style mappings
+      const primaryStyle = design.style.primary;
+      const mappedTheme = styleMapping[primaryStyle as keyof typeof styleMapping] || "Dawn";
+      const mappedTypography = typographyMapping[primaryStyle as keyof typeof typographyMapping] || { heading: "Sans Serif", body: "Sans Serif" };
+      const mappedTone = toneMapping[primaryStyle as keyof typeof toneMapping] || "Clear and professional";
+
+      // Validate and apply mappings
+      return {
+        blocked: false,
+        blocked_reason: "",
+        style: {
+          primary: design.style.primary || "Modern Minimal",
+          secondary: design.style.secondary || "Professional Clean",
+          confidence: design.style.confidence || 0.85
+        },
+        theme: mappedTheme,
+        palette: design.palette || {
+          primary: "#111111",
+          accent_1: "#1F6FEB",
+          accent_2: "#E6E6E6", 
+          background: "#FFFFFF"
+        },
+        typography: mappedTypography,
+        tone: mappedTone,
+        copy: design.copy || {
+          hero: { headline: "", subhead: "", cta: "Shop now" },
+          bullets: ["", "", "", "", ""],
+          description: "",
+          specs: [],
+          faq: [
+            { q: "Shipping", a: "" },
+            { q: "Returns", a: "" },
+            { q: "Warranty", a: "" },
+            { q: "Compatibility", a: "" }
+          ]
+        },
+        images: design.images || {
+          hero_prompt: "",
+          gallery_prompts: [],
+          detail_prompts: []
+        },
+        layout: design.layout || {
+          pdp_order: ["hero", "gallery", "bullets", "description", "specs", "faq", "trust"]
+        },
+        proof: design.proof || {
+          badges: ["SSL secure", "30 day returns", "Fast shipping"]
+        }
+      };
+
+    } catch (error) {
+      console.error('Premium theme generation failed:', error);
+      
+      // Return fallback design
+      return {
+        blocked: false,
+        blocked_reason: "",
+        style: {
+          primary: "Modern Minimal",
+          secondary: "Professional Clean",
+          confidence: 0.75
+        },
+        theme: "Dawn",
+        palette: {
+          primary: "#111111",
+          accent_1: "#1F6FEB",
+          accent_2: "#E6E6E6",
+          background: "#FFFFFF"
+        },
+        typography: {
+          heading: "Geometric Sans",
+          body: "System Sans"
+        },
+        tone: "Clear and professional",
+        copy: {
+          hero: {
+            headline: inputs.product_title,
+            subhead: "Premium quality you can trust",
+            cta: "Shop now"
+          },
+          bullets: [
+            "High-quality materials and construction",
+            "Fast and reliable shipping worldwide", 
+            "30-day money-back guarantee",
+            "Expert customer support team",
+            "Trusted by thousands of customers"
+          ],
+          description: "Experience the perfect blend of quality and value with our premium product. Designed with attention to detail and built to last, this item delivers exceptional performance that exceeds expectations. Join thousands of satisfied customers who trust our commitment to excellence.",
+          specs: ["Premium materials", "Durable construction", "Multiple sizes available", "1-year warranty"],
+          faq: [
+            { q: "Shipping", a: "Free shipping on orders over $50. Standard delivery in 3-7 business days." },
+            { q: "Returns", a: "30-day money-back guarantee. Return for any reason within 30 days." },
+            { q: "Warranty", a: "1-year manufacturer warranty covering defects and normal wear." },
+            { q: "Compatibility", a: "Compatible with most standard applications. See specifications for details." }
+          ]
+        },
+        images: {
+          hero_prompt: `Professional product photography of ${inputs.product_title}, clean white background, studio lighting`,
+          gallery_prompts: [
+            `${inputs.product_title} in use, lifestyle photography`,
+            `Close-up detail shot of ${inputs.product_title} features`,
+            `${inputs.product_title} packaging and accessories`
+          ],
+          detail_prompts: [
+            `Technical diagram of ${inputs.product_title} components`,
+            `Size comparison chart for ${inputs.product_title}`
+          ]
+        },
+        layout: {
+          pdp_order: ["hero", "gallery", "bullets", "description", "specs", "faq", "trust"]
+        },
+        proof: {
+          badges: ["SSL secure", "30 day returns", "Fast shipping"]
+        }
+      };
     }
   }
 
