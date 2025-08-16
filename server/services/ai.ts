@@ -150,13 +150,19 @@ export class AIContentGenerator {
       
       // Generate high-quality product images
       // Generate professional advertisement concepts using GPT-4o vision
+      console.log('Starting advertisement concept generation with user prompt...');
       const advertisementConcepts: string[] = [];
       for (const imageUrl of productData.images.slice(0, 2)) {
+        console.log(`Generating advertisement for image: ${imageUrl}`);
         const concept = await this.generateProfessionalAdvertisement(imageUrl, content.productTitle || productData.title);
         if (concept) {
+          console.log('Advertisement concept generated successfully');
           advertisementConcepts.push(concept);
+        } else {
+          console.log('Advertisement concept generation failed for this image');
         }
       }
+      console.log(`Total advertisement concepts generated: ${advertisementConcepts.length}`);
       
       // Validate and set defaults if needed
       return {
