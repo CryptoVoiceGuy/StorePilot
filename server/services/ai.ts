@@ -280,16 +280,16 @@ export class AIContentGenerator {
 
       console.log('Using GPT-4o generated prompt for GPT Image 1:', detailedPrompt);
 
-      // Temporarily use DALL-E 3 while GPT Image 1 access propagates (up to 15 minutes)
+      // Use GPT Image 1 only - no DALL-E 3 fallbacks
       const imageGenResponse = await openai.images.generate({
-        model: "dall-e-3", // Temporary until GPT Image 1 access propagates
+        model: "gpt-image-1", // GPT Image 1 only - user requirement
         prompt: detailedPrompt,
         size: "1024x1024",
-        quality: "standard",
+        quality: "high",
         n: 1,
       });
 
-      console.log('DALL-E 3 response (temporary):', imageGenResponse.data);
+      console.log('GPT Image 1 response:', imageGenResponse.data);
 
       if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
         console.log('Generated image URL from GPT Image 1:', imageGenResponse.data[0].url);
