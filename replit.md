@@ -2,6 +2,13 @@
 
 This is an AI-powered Shopify store builder with integrated referral and OAuth systems that transforms product URLs into complete, branded stores while generating recurring revenue through Shopify Partner commissions. The platform combines automated store creation with a "Done-For-You" service model, earning 20% lifetime commissions on all referred Shopify subscriptions.
 
+## Recent Changes (August 16, 2025)
+- **CRITICAL FIX**: Fixed major image extraction bug where system was analyzing website logos instead of actual product images
+- **Enhanced Alibaba Scraper**: Now extracts product images from URL parameters (`__detailProductImg`) and filters out logos/banners
+- **GPT-4o + GPT Image 1 Working**: Confirmed methodology working perfectly with actual product analysis and professional image generation
+- **Product Image Filtering**: Implemented smart filtering to exclude logos, flags, system images, and small icons
+- **Verified Complete Pipeline**: Successfully tested with real Alibaba handheld electric cleaning brush URL
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
