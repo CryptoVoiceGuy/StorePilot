@@ -31,7 +31,8 @@ export interface GeneratedContent {
   heroHeadline: string;
   heroSubheadline: string;
   callToAction: string;
-  generatedImages: string[]; // URLs to AI-generated product images
+  generatedImages: string[]; // URLs to authentic product images
+  advertisementConcepts?: string[]; // Professional advertisement concepts from GPT-4o
 }
 
 export interface PremiumThemeInputs {
@@ -148,8 +149,14 @@ export class AIContentGenerator {
       const content = JSON.parse(response.choices[0].message.content!);
       
       // Generate high-quality product images
-      // DALL-E 3 DISABLED: Never generate AI images - only use authentic originals
-      const generatedImages: string[] = []; // Always empty - use original images only
+      // Generate professional advertisement concepts using GPT-4o vision
+      const advertisementConcepts: string[] = [];
+      for (const imageUrl of productData.images.slice(0, 2)) {
+        const concept = await this.generateProfessionalAdvertisement(imageUrl, content.productTitle || productData.title);
+        if (concept) {
+          advertisementConcepts.push(concept);
+        }
+      }
       
       // Validate and set defaults if needed
       return {
@@ -168,7 +175,8 @@ export class AIContentGenerator {
         heroHeadline: content.heroHeadline || `Transform Your Life with ${content.productTitle}`,
         heroSubheadline: content.heroSubheadline || "Premium quality, unbeatable value, fast delivery.",
         callToAction: content.callToAction || "Order Now",
-        generatedImages: generatedImages
+        generatedImages: productData.images, // Use original authentic images
+        advertisementConcepts: advertisementConcepts // Professional ad concepts from GPT-4o
       };
     } catch (error) {
       console.error('AI content generation failed:', error);
@@ -575,10 +583,42 @@ export class AIContentGenerator {
     }
   }
 
-  async generateImageWithChatGPT(referenceImageUrl: string, prompt: string): Promise<string | null> {
-    // DISABLED: No AI image generation - causes wrong product generation
-    console.log('AI Image generation disabled - using original product images only');
-    return null;
+  async generateProfessionalAdvertisement(imageUrl: string, productTitle: string): Promise<string | null> {
+    try {
+      console.log('Creating professional advertisement concept with GPT-4o vision...');
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Act as an advertising executive and re create this advert. Keep the product in this image the exact same and come up with a new advertisment. The image is to be high quality and would be considered to be done by a professional charging $1000 per hour."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const advertisementConcept = response.choices[0].message.content;
+      console.log('Professional advertisement concept created:', advertisementConcept);
+      return advertisementConcept;
+    } catch (error) {
+      console.error('Professional advertisement generation failed:', error);
+      if (error instanceof Error) {
+        console.error('Advertisement error details:', error.message);
+      }
+      return null;
+    }
   }
 
 
