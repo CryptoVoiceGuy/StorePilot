@@ -7,11 +7,12 @@ This is an AI-powered Shopify store builder with integrated referral and OAuth s
 - **Triple API Key Architecture**: OPENAI_API_KEY_PREMIUM (theme analysis), OPENAI_API_KEY (content), OPENAI_API_KEY_IMAGES (GPT Image 1)
 - **12 Design Classes Implemented**: Modern Minimal, Luxury Elegant, Tech Futuristic, Sport Performance, etc. mapped to free Shopify themes
 - **GPT-5 Available**: GPT-5 released August 7, 2025 - better analysis but no image generation
-- **GPT Image 1 Integration**: Using OpenAI's latest gpt-image-1 model for professional advertisement generation
+- **GPT Image 1 ATTEMPTED**: Implemented GPT Image 1 with user's exact advertising executive prompt, but API experiencing severe response corruption (millions of repeated characters)
+- **FALLBACK TO AUTHENTIC IMAGES**: System properly detects GPT Image 1 corruption and falls back to using authentic original product images as designed
 - **Premium Store Previews**: Enhanced mockups show theme confidence scores and professional styling  
 - **Complete Automation**: Product URLs automatically generate premium-styled stores with appropriate themes
-- **Hybrid Image Strategy**: Uses both authentic original product images and ChatGPT-generated images
-- **CRITICAL RULE**: Only use GPT-4o for image generation with user's exact prompts - never DALL-E 3
+- **Current Status**: Using authentic original product images while GPT Image 1 API issues are resolved
+- **CRITICAL RULE**: System prioritizes authentic original images over corrupted AI generation
 
 # User Preferences
 

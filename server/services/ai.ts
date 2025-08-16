@@ -617,7 +617,22 @@ export class AIContentGenerator {
       });
 
       const advertisementConcept = analysisResponse.choices[0].message.content;
-      console.log('Advertisement concept created:', advertisementConcept);
+      
+      // Check for corrupted response (repeated characters)
+      if (advertisementConcept && advertisementConcept.length > 3000) {
+        const firstChar = advertisementConcept.charAt(0);
+        const repeatedChars = advertisementConcept.split(firstChar).length - 1;
+        if (repeatedChars > advertisementConcept.length * 0.8) {
+          console.log('Corrupted GPT-4o response detected - skipping image generation');
+          return null;
+        }
+      }
+      
+      if (advertisementConcept && advertisementConcept.length > 2000) {
+        console.log('Advertisement concept too long, using truncated version');
+      } else {
+        console.log('Advertisement concept created successfully');
+      }
 
       // Limit the prompt length for GPT Image 1 (max 1000 chars)
       const limitedPrompt = advertisementConcept && advertisementConcept.length > 1000 
@@ -625,14 +640,21 @@ export class AIContentGenerator {
         : advertisementConcept || `Professional $1000/hour quality advertisement for ${productTitle}. High-end commercial photography, studio lighting, premium presentation.`;
       
       console.log('Making GPT Image 1 API call with prompt length:', limitedPrompt.length);
+      console.log('GPT Image 1 can take up to 180 seconds - please wait...');
       
-      const imageResponse = await imageOpenai.images.generate({
-        model: "gpt-image-1",
-        prompt: limitedPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "high",
-      });
+      // GPT Image 1 can take up to 180 seconds, so we set a generous timeout
+      const imageResponse = await Promise.race([
+        imageOpenai.images.generate({
+          model: "gpt-image-1",
+          prompt: limitedPrompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "high",
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('GPT Image 1 timeout after 200 seconds')), 200000)
+        )
+      ]) as any;
 
       console.log('GPT Image 1 response received, checking for image URL...');
       
