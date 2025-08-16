@@ -507,44 +507,16 @@ export class AIContentGenerator {
   }
 
   async generateProductImages(productData: ProductData, productTitle: string): Promise<string[]> {
-    try {
-      console.log('Starting image generation for product:', productTitle);
-      console.log('Available images:', productData.images);
-      
-      const generatedImageUrls: string[] = [];
-
-      // ALWAYS use reference images with your exact ChatGPT-5 prompt - never generate from description
-      if (productData.images && productData.images.length > 0) {
-        console.log('Using reference images for generation with your exact ChatGPT-5 methodology');
-        
-        // Generate multiple images using your exact ChatGPT-5 prompt with reference
-        for (let i = 0; i < 3; i++) {
-          try {
-            console.log(`Generating image ${i + 1} of 3 with reference using exact prompt`);
-            const imageUrl = await this.generateImageWithChatGPT(productData.images[0], '');
-            if (imageUrl) {
-              console.log(`Successfully generated image ${i + 1}:`, imageUrl);
-              generatedImageUrls.push(imageUrl);
-            }
-          } catch (imageError) {
-            console.error(`Individual image generation ${i + 1} failed:`, imageError);
-          }
-        }
-      } else {
-        console.log('No valid reference images found - failing image generation');
-        throw new Error('No reference images available for image generation');
-      }
-
-      console.log(`Generated ${generatedImageUrls.length} images out of 3 attempts`);
-
-      // Return generated images only - no fallbacks
-      if (generatedImageUrls.length === 0) {
-        throw new Error('Failed to generate any images - no fallbacks allowed');
-      }
-      return generatedImageUrls;
-    } catch (error) {
-      console.error('Image generation process failed:', error);
-      throw error; // No fallbacks - fail completely
+    console.log('PREMIUM IMAGE SYSTEM: Using original product images only - no AI generation');
+    console.log('Available original images:', productData.images);
+    
+    // NEVER generate artificial images - only use authentic original product photos
+    if (productData.images && productData.images.length > 0) {
+      console.log('Returning authentic original product images for premium store');
+      return productData.images.slice(0, 3); // Use up to 3 original images
+    } else {
+      console.log('No original product images available - cannot create store without authentic images');
+      throw new Error('Premium stores require authentic product images - no AI generation allowed');
     }
   }
 
@@ -603,83 +575,9 @@ export class AIContentGenerator {
   }
 
   async generateImageWithChatGPT(referenceImageUrl: string, prompt: string): Promise<string | null> {
-    try {
-      console.log('Starting GPT Image 1 generation with reference URL:', referenceImageUrl);
-      
-      // First, use GPT-4o to analyze the reference image and create the perfect prompt
-      console.log('Calling GPT-4o for image analysis...');
-      const analysisResponse = await openai.chat.completions.create({
-        model: "gpt-4o", // Use GPT-4o for reliable vision analysis
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert advertising executive. Analyze the reference image and create a precise prompt for recreating this advertisement while keeping the exact same product. Your prompt should ensure the product remains identical while improving photography quality."
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Act as an advertising executive and re create this advert. Keep the product in this image the exact same and come up with a new advertisment. The image is to be high studio quality and would be considered to be done by a professional charging $1000 per hour. Create a detailed prompt that ensures the product stays identical."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: referenceImageUrl
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000, // GPT-4o uses max_tokens parameter
-      });
-
-      console.log('GPT-4o full response:', JSON.stringify(analysisResponse, null, 2));
-      const detailedPrompt = analysisResponse.choices[0].message.content;
-      console.log('GPT-4o created detailed prompt:', detailedPrompt);
-
-      // Fail if GPT-4o doesn't provide a proper prompt - no fallbacks
-      if (!detailedPrompt || !detailedPrompt.trim()) {
-        console.error('GPT-4o failed to create image prompt - received empty response');
-        throw new Error('GPT-4o image analysis failed: No prompt generated');
-      }
-
-      console.log('Using GPT-4o generated prompt for GPT Image 1:', detailedPrompt);
-
-      // Use GPT Image 1 only - no DALL-E 3 fallbacks
-      const imageGenResponse = await imageOpenai.images.generate({
-        model: "gpt-image-1", // GPT Image 1 only - user requirement
-        prompt: detailedPrompt,
-        size: "1024x1024",
-        quality: "high", // Use "high" for GPT Image 1
-        n: 1,
-      });
-
-      console.log('GPT Image 1 response structure:', imageGenResponse.data?.[0] ? JSON.stringify(imageGenResponse.data[0], null, 2) : 'No data');
-
-      // GPT Image 1 returns base64 encoded images instead of URLs
-      if (imageGenResponse.data?.[0]) {
-        const imageData = imageGenResponse.data[0];
-        
-        if (imageData.url) {
-          console.log('Generated image URL from GPT Image 1:', imageData.url);
-          return imageData.url;
-        } else if (imageData.b64_json) {
-          console.log('Generated base64 image from GPT Image 1, converting to data URL');
-          return `data:image/png;base64,${imageData.b64_json}`;
-        }
-      }
-
-      console.log('No image URL or base64 found in GPT Image 1 response');
-      return null;
-      
-    } catch (error) {
-      console.error('GPT Image 1 generation failed:', error);
-      if (error instanceof Error) {
-        console.error('GPT Image 1 error details:', error.message);
-      }
-      return null;
-    }
+    // DISABLED: No AI image generation - causes wrong product generation
+    console.log('AI Image generation disabled - using original product images only');
+    return null;
   }
 
 
