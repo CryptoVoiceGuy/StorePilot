@@ -147,14 +147,14 @@ export class AIContentGenerator {
       
       const generatedImageUrls: string[] = [];
 
-      // If we have reference images, use them with your exact prompt
+      // ALWAYS use reference images with your exact ChatGPT-5 prompt - never generate from description
       if (productData.images && productData.images.length > 0 && !productData.images[0].includes('placeholder')) {
-        console.log('Using reference images for generation');
+        console.log('Using reference images for generation with your exact ChatGPT-5 methodology');
         
         // Generate multiple images using your exact ChatGPT-5 prompt with reference
         for (let i = 0; i < 3; i++) {
           try {
-            console.log(`Generating image ${i + 1} of 3 with reference`);
+            console.log(`Generating image ${i + 1} of 3 with reference using exact prompt`);
             const imageUrl = await this.generateImageWithChatGPT(productData.images[0], '');
             if (imageUrl) {
               console.log(`Successfully generated image ${i + 1}:`, imageUrl);
@@ -165,21 +165,8 @@ export class AIContentGenerator {
           }
         }
       } else {
-        console.log('No reference images available, generating from product description');
-        
-        // Generate images without reference using product description
-        for (let i = 0; i < 3; i++) {
-          try {
-            console.log(`Generating image ${i + 1} of 3 from description`);
-            const imageUrl = await this.generateImageFromDescription(productTitle, productData.description);
-            if (imageUrl) {
-              console.log(`Successfully generated image ${i + 1}:`, imageUrl);
-              generatedImageUrls.push(imageUrl);
-            }
-          } catch (imageError) {
-            console.error(`Individual image generation ${i + 1} failed:`, imageError);
-          }
-        }
+        console.log('No valid reference images found - returning original images to avoid creating wrong products');
+        return productData.images; // Never generate new products, only use originals
       }
 
       console.log(`Generated ${generatedImageUrls.length} images out of 3 attempts`);
@@ -192,34 +179,7 @@ export class AIContentGenerator {
     }
   }
 
-  async generateImageFromDescription(productTitle: string, description: string): Promise<string | null> {
-    try {
-      // Create a professional advertisement image using your exact methodology but with text description
-      const exactPrompt = `Act as an advertising executive and create a professional advertisement for "${productTitle}". Product details: ${description}. The image should be high studio quality and would be considered to be done by a professional charging $1000 per hour. Professional product photography with clean white background, commercial lighting, premium e-commerce style.`;
 
-      console.log('Generating image from description with prompt:', exactPrompt);
-
-      const imageGenResponse = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: exactPrompt,
-        size: "1024x1024",
-        quality: "hd",
-        style: "natural",
-        n: 1,
-      });
-
-      if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
-        console.log('Generated image from description:', imageGenResponse.data[0].url);
-        return imageGenResponse.data[0].url;
-      }
-
-      return null;
-      
-    } catch (error) {
-      console.error('Image generation from description failed:', error);
-      return null;
-    }
-  }
 
   async analyzeProductImages(imageUrls: string[], productTitle: string): Promise<string | null> {
     try {

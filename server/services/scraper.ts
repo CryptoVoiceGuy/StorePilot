@@ -97,14 +97,33 @@ export class ProductScraper {
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    const images = this.extractImages($, [
-      '.main-image img',
-      '.thumb-image img', 
-      '.product-image img',
-      'img[src*="product"]',
-      '.gallery-main img',
-      '.slider-image img'
-    ]);
+    // Extract images from JSON-LD structured data first (most reliable for Alibaba)
+    let images: string[] = [];
+    
+    // Look for JSON-LD structured data containing image URLs
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const jsonData = JSON.parse($(el).html() || '{}');
+        if (jsonData.image && Array.isArray(jsonData.image)) {
+          images.push(...jsonData.image);
+        }
+      } catch (e) {
+        // Continue if JSON parsing fails
+      }
+    });
+    
+    // Fallback to DOM selectors if no images found in JSON-LD
+    if (images.length === 0) {
+      images = this.extractImages($, [
+        '.main-image img',
+        '.thumb-image img', 
+        '.product-image img',
+        'img[src*="alicdn.com"]',
+        'img[src*="product"]',
+        '.gallery-main img',
+        '.slider-image img'
+      ]);
+    }
     
     console.log('Extracted Alibaba images:', images);
     
