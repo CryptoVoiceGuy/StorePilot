@@ -619,21 +619,31 @@ export class AIContentGenerator {
       const advertisementConcept = analysisResponse.choices[0].message.content;
       console.log('Advertisement concept created:', advertisementConcept);
 
-      // Now generate the actual image using gpt-image-1
+      // Limit the prompt length for GPT Image 1 (max 1000 chars)
+      const limitedPrompt = advertisementConcept && advertisementConcept.length > 1000 
+        ? advertisementConcept.substring(0, 1000) + '...'
+        : advertisementConcept || `Professional $1000/hour quality advertisement for ${productTitle}. High-end commercial photography, studio lighting, premium presentation.`;
+      
+      console.log('Making GPT Image 1 API call with prompt length:', limitedPrompt.length);
+      
       const imageResponse = await imageOpenai.images.generate({
         model: "gpt-image-1",
-        prompt: advertisementConcept || `Professional $1000/hour quality advertisement for ${productTitle}. High-end commercial photography, studio lighting, premium presentation.`,
+        prompt: limitedPrompt,
         n: 1,
         size: "1024x1024",
         quality: "high",
       });
 
+      console.log('GPT Image 1 response received, checking for image URL...');
+      
       const generatedImageUrl = imageResponse.data?.[0]?.url;
       if (generatedImageUrl) {
-        console.log('Professional advertisement image generated:', generatedImageUrl);
+        console.log('Professional advertisement image generated successfully:', generatedImageUrl);
         return generatedImageUrl;
       } else {
         console.log('No image URL returned from GPT Image 1');
+        console.log('Response structure keys:', Object.keys(imageResponse));
+        console.log('Response data:', imageResponse.data);
         return null;
       }
     } catch (error) {
