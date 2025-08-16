@@ -270,6 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         target_market: params.targetMarket || "US",
         currency: params.currency || "USD"
       });
+      
+      console.log('Premium theme generated:', JSON.stringify(premiumTheme, null, 2));
 
       logs.push({ step: "theme_complete", message: `Premium theme designed: ${premiumTheme.style.primary} → ${premiumTheme.theme}`, timestamp: new Date() });
 

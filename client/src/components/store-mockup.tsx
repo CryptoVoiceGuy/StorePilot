@@ -9,6 +9,9 @@ interface StoreMockupProps {
 }
 
 export function StoreMockup({ productData, generatedContent }: StoreMockupProps) {
+  // Check for premium theme data
+  const premiumTheme = generatedContent?.premiumTheme;
+  
   const mockProduct = {
     title: generatedContent?.productTitle || productData?.title || "Premium Wireless Earbuds with ANC",
     price: productData?.price || "$79.99",
@@ -24,6 +27,42 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
     reviews: 1247
   };
 
+  // Get premium theme colors or fallback
+  const themeColors = premiumTheme ? {
+    primary: premiumTheme.palette.primary,
+    accent1: premiumTheme.palette.accent_1,
+    accent2: premiumTheme.palette.accent_2,
+    background: premiumTheme.palette.background
+  } : {
+    primary: "#3b82f6",
+    accent1: "#8b5cf6", 
+    accent2: "#06b6d4",
+    background: "#ffffff"
+  };
+  
+  // Style class for different themes
+  const getStyleClass = () => {
+    if (!premiumTheme) return "";
+    const style = premiumTheme.style.primary;
+    
+    const styleClasses = {
+      "Modern Minimal": "bg-white text-gray-900",
+      "Luxury Elegant": "bg-slate-50 text-slate-900",
+      "Cozy Natural": "bg-amber-50 text-amber-900",
+      "Tech Futuristic": "bg-slate-900 text-white",
+      "Sport Performance": "bg-red-50 text-red-900",
+      "Street Utility": "bg-stone-100 text-stone-900",
+      "Playful Colorful": "bg-pink-50 text-pink-900",
+      "Eco Rustic": "bg-green-50 text-green-900",
+      "Professional Clean": "bg-blue-50 text-blue-900",
+      "Beauty Wellness": "bg-purple-50 text-purple-900",
+      "Kitchen Home": "bg-orange-50 text-orange-900",
+      "Pets Friendly": "bg-yellow-50 text-yellow-900"
+    };
+    
+    return styleClasses[style] || "bg-white text-gray-900";
+  };
+
   return (
     <Card className="overflow-hidden shadow-2xl">
       {/* Browser Header */}
@@ -36,26 +75,47 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
         </div>
       </div>
       
+      {/* Premium Theme Indicator */}
+      {premiumTheme && (
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span>Premium Theme: {premiumTheme.style.primary} → {premiumTheme.theme}</span>
+            <Badge className="bg-white/20 text-white border-white/30">
+              {Math.round(premiumTheme.style.confidence * 100)}% Match
+            </Badge>
+          </div>
+        </div>
+      )}
+      
       {/* Store Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div 
+        className={`border-b px-6 py-4 ${getStyleClass()}`}
+        style={{ backgroundColor: themeColors.background }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center">
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: themeColors.primary }}
+            >
               <ShoppingCart className="text-white h-5 w-5" />
             </div>
-            <span className="text-xl font-bold text-gray-900">{mockProduct.brand}</span>
+            <span className="text-xl font-bold">{mockProduct.brand}</span>
           </div>
-          <div className="flex items-center space-x-6 text-sm">
-            <span className="text-gray-600">Shop</span>
-            <span className="text-gray-600">About</span>
-            <span className="text-gray-600">Contact</span>
-            <ShoppingCart className="text-gray-600 h-5 w-5" />
+          <div className="flex items-center space-x-6 text-sm opacity-80">
+            <span>Shop</span>
+            <span>About</span>
+            <span>Contact</span>
+            <ShoppingCart className="h-5 w-5" />
           </div>
         </div>
       </div>
       
       {/* Product Section */}
-      <CardContent className="p-6">
+      <CardContent 
+        className="p-6"
+        style={{ backgroundColor: themeColors.background }}
+      >
         <div className="grid md:grid-cols-2 gap-8">
           {/* Product Image */}
           <div>
@@ -96,7 +156,10 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
               ))}
             </div>
             
-            <Button className="w-full btn-primary text-lg py-3">
+            <Button 
+              className="w-full text-lg py-3 text-white font-semibold rounded-lg transition-all hover:opacity-90"
+              style={{ backgroundColor: themeColors.primary }}
+            >
               Add to Cart - {mockProduct.price}
             </Button>
           </div>
