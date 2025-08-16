@@ -267,12 +267,19 @@ export class AIContentGenerator {
       const detailedPrompt = analysisResponse.choices[0].message.content;
       console.log('GPT-5 created detailed prompt:', detailedPrompt);
 
+      // Create a fallback professional prompt if GPT-5 doesn't provide one
+      const finalPrompt = detailedPrompt && detailedPrompt.trim() 
+        ? detailedPrompt 
+        : `Professional high-end product photography of ${prompt}, studio lighting, clean white background, commercial quality shot worth $1000/hour, ultra-high resolution, professional e-commerce photography, perfect lighting and composition`;
+
+      console.log('Using final prompt for GPT Image 1:', finalPrompt);
+
       // Now use GPT Image 1 for actual image generation
       const imageGenResponse = await openai.images.generate({
         model: "gpt-image-1", // Use GPT Image 1 for generation
-        prompt: detailedPrompt || "Professional product photography with studio lighting, clean background, commercial quality, $1000/hour professional standard",
+        prompt: finalPrompt,
         size: "1024x1024",
-        quality: "standard",
+        quality: "high", // Fixed: use 'high' instead of 'standard'
         n: 1,
       });
 
