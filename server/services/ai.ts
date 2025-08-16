@@ -634,27 +634,14 @@ export class AIContentGenerator {
   }
 
   async generatePremiumImages(productData: ProductData, premiumTheme: PremiumThemeDesign): Promise<string[]> {
-    try {
-      // Get style-specific image generation prompts
-      const stylePrompts = this.getStyleImagePrompts(premiumTheme.style.primary);
-      
-      // Generate hero image with premium styling
-      const heroPrompt = `${stylePrompts.style} product photography of ${productData.title}, ${stylePrompts.background}, ${stylePrompts.lighting}, ${stylePrompts.composition}, professional commercial photography, high-end ${premiumTheme.style.primary.toLowerCase()} aesthetic`;
-
-      console.log('Generating premium image with style:', premiumTheme.style.primary);
-      console.log('Image prompt:', heroPrompt);
-
-      const response = await imageOpenai.images.generate({
-        model: "dall-e-3",
-        prompt: heroPrompt,
-        size: "1024x1024",
-        quality: "hd",
-        n: 1,
-      });
-
-      return [response.data[0].url || ''];
-    } catch (error) {
-      console.error('Premium image generation failed:', error);
+    console.log('DALL-E 3 COMPLETELY DISABLED - Using only authentic original product images');
+    
+    // NEVER generate AI images - only return original authentic product photos
+    if (productData.images && productData.images.length > 0) {
+      console.log('Returning authentic original images instead of AI generation:', productData.images);
+      return productData.images.slice(0, 3);
+    } else {
+      console.log('No original images available - cannot create store without authentic images');
       return [];
     }
   }

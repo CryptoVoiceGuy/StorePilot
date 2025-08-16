@@ -281,22 +281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const generatedContent = await aiGenerator.generateStoreContent(productData, params.targetMarket);
       
-      // Generate premium images that match the selected theme
-      logs.push({ step: "image_generation", message: `Generating premium ${premiumTheme.style.primary} style images...`, timestamp: new Date() });
+      // Use only authentic original product images - NO AI generation
+      console.log('USING AUTHENTIC ORIGINAL IMAGES - No AI generation whatsoever');
+      logs.push({ step: "image_authentic", message: `Using ${productData.images.length} authentic original product images`, timestamp: new Date() });
       await storage.updateProject(projectId, { buildLogs: logs });
       
-      let premiumImages: string[] = [];
-      try {
-        premiumImages = await aiGenerator.generatePremiumImages(productData, premiumTheme);
-        if (premiumImages.length > 0) {
-          logs.push({ step: "image_complete", message: `Generated ${premiumImages.length} premium images`, timestamp: new Date() });
-        } else {
-          logs.push({ step: "image_warning", message: "Premium image generation returned empty - check API quota", timestamp: new Date() });
-        }
-      } catch (imageError) {
-        console.error('Premium image generation failed:', imageError);
-        logs.push({ step: "image_warning", message: `Premium image failed: ${imageError.message}`, timestamp: new Date() });
-      }
+      const premiumImages: string[] = productData.images || [];
 
       // Merge premium theme design with generated content
       const enhancedContent = {
