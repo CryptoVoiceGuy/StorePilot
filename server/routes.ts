@@ -256,26 +256,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buildLogs: logs 
       });
 
-      // Step 2: Generate content with AI
-      logs.push({ step: "ai_generation", message: "Generating store content with AI...", timestamp: new Date() });
+      // Step 2: Generate premium theme design
+      logs.push({ step: "theme_analysis", message: "Analyzing product for premium theme design...", timestamp: new Date() });
+      await storage.updateProject(projectId, { buildLogs: logs });
+      
+      // Generate premium theme design based on product data
+      const premiumTheme = await aiGenerator.generatePremiumTheme({
+        product_url: params.productUrl,
+        product_title: productData.title,
+        product_category: productData.category || "General",
+        raw_text: productData.description,
+        image_captions: productData.images.map((img, i) => `Product image ${i + 1}`),
+        target_market: params.targetMarket || "US",
+        currency: params.currency || "USD"
+      });
+
+      logs.push({ step: "theme_complete", message: `Premium theme designed: ${premiumTheme.style.primary} → ${premiumTheme.theme}`, timestamp: new Date() });
+
+      // Generate enhanced content using premium theme specifications
+      logs.push({ step: "ai_generation", message: "Generating enhanced store content...", timestamp: new Date() });
       await storage.updateProject(projectId, { buildLogs: logs });
       
       const generatedContent = await aiGenerator.generateStoreContent(productData, params.targetMarket);
       
-      logs.push({ step: "ai_complete", message: "Content generation completed", timestamp: new Date() });
+      // Merge premium theme design with generated content
+      const enhancedContent = {
+        ...generatedContent,
+        premiumTheme: premiumTheme,
+        productTitle: premiumTheme.copy.hero.headline || generatedContent.productTitle,
+        heroHeadline: premiumTheme.copy.hero.headline || generatedContent.heroHeadline,
+        heroSubheadline: premiumTheme.copy.hero.subhead || generatedContent.heroSubheadline,
+        callToAction: premiumTheme.copy.hero.cta || generatedContent.callToAction,
+        features: premiumTheme.copy.bullets || generatedContent.features,
+        productDescription: premiumTheme.copy.description || generatedContent.productDescription,
+        brandColors: {
+          primary: premiumTheme.palette.primary,
+          secondary: premiumTheme.palette.accent_1,
+          accent: premiumTheme.palette.accent_2
+        }
+      };
+      
+      logs.push({ step: "ai_complete", message: "Enhanced content generation completed", timestamp: new Date() });
       await storage.updateProject(projectId, { 
-        generatedContent: generatedContent as any,
+        generatedContent: enhancedContent as any,
         buildLogs: logs 
       });
 
-      // Step 3: Create Shopify store
-      logs.push({ step: "shopify_creation", message: "Creating Shopify store...", timestamp: new Date() });
+      // Step 3: Create Shopify store with premium theme
+      logs.push({ step: "shopify_creation", message: `Creating ${premiumTheme.theme} store with ${premiumTheme.style.primary} design...`, timestamp: new Date() });
       await storage.updateProject(projectId, { buildLogs: logs });
       
-      const store = await shopifyService.createDevelopmentStore(productData, generatedContent, {
-        storeName: generatedContent.brandName,
+      const store = await shopifyService.createDevelopmentStore(productData, enhancedContent, {
+        storeName: enhancedContent.brandName,
         currency: params.currency,
         market: params.targetMarket,
+        theme: premiumTheme.theme,
+        style: premiumTheme.style.primary
       });
       
       logs.push({ step: "shopify_complete", message: "Store created successfully", timestamp: new Date() });

@@ -114,10 +114,23 @@ export default function StorePreview() {
               <div className="flex items-start space-x-3">
                 <Eye className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-blue-900">Store Preview</h3>
+                  <h3 className="font-medium text-blue-900">Premium Store Design</h3>
                   <p className="text-blue-700 text-sm mt-1">
-                    This is a preview of your generated store. You can make changes in the Shopify admin panel.
+                    AI-generated premium store using product-specific design analysis.
                   </p>
+                  {project.generatedContent?.premiumTheme && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        Style: {project.generatedContent.premiumTheme.style.primary}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Theme: {project.generatedContent.premiumTheme.theme}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Confidence: {Math.round(project.generatedContent.premiumTheme.style.confidence * 100)}%
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

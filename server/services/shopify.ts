@@ -8,6 +8,7 @@ export interface ShopifyStoreConfig {
   currency: string;
   timezone: string;
   market: string;
+  style?: string;
 }
 
 export interface ShopifyProduct {
@@ -230,10 +231,11 @@ export class ShopifyService {
         settings: {
           storeName: content.brandName,
           subdomain: subdomain,
-          theme: 'modern-ecommerce',
+          theme: config.theme || 'modern-ecommerce',
           currency: config.currency || 'USD',
           timezone: 'America/New_York',
           market: config.market || 'US',
+          style: config.style || 'Modern Minimal'
         }
       };
 
@@ -271,6 +273,74 @@ export class ShopifyService {
   }
 
   private generateTheme(content: GeneratedContent) {
+    // Check if premium theme data is available
+    const premiumTheme = (content as any).premiumTheme;
+    
+    if (premiumTheme) {
+      return {
+        name: `${premiumTheme.theme} (${premiumTheme.style.primary})`,
+        style: premiumTheme.style.primary,
+        shopifyTheme: premiumTheme.theme,
+        confidence: premiumTheme.style.confidence,
+        settings: {
+          colors: {
+            primary: premiumTheme.palette.primary,
+            accent1: premiumTheme.palette.accent_1,
+            accent2: premiumTheme.palette.accent_2,
+            background: premiumTheme.palette.background
+          },
+          typography: {
+            headingFont: premiumTheme.typography.heading,
+            bodyFont: premiumTheme.typography.body,
+          },
+          tone: premiumTheme.tone,
+          layout: {
+            maxWidth: '1200px',
+            headerStyle: this.getHeaderStyle(premiumTheme.style.primary),
+            footerStyle: this.getFooterStyle(premiumTheme.style.primary),
+            sections: premiumTheme.layout.pdp_order
+          },
+          sections: {
+            hero: {
+              enabled: true,
+              headline: premiumTheme.copy.hero.headline,
+              subheadline: premiumTheme.copy.hero.subhead,
+              ctaText: premiumTheme.copy.hero.cta,
+            },
+            features: {
+              enabled: true,
+              features: premiumTheme.copy.bullets,
+            },
+            description: {
+              enabled: true,
+              content: premiumTheme.copy.description
+            },
+            specifications: {
+              enabled: true,
+              specs: premiumTheme.copy.specs
+            },
+            faq: {
+              enabled: true,
+              faqs: premiumTheme.copy.faq.map((item: any) => ({
+                question: item.q,
+                answer: item.a
+              }))
+            },
+            trustBadges: {
+              enabled: true,
+              badges: premiumTheme.proof.badges
+            }
+          },
+          images: {
+            heroPrompt: premiumTheme.images.hero_prompt,
+            galleryPrompts: premiumTheme.images.gallery_prompts,
+            detailPrompts: premiumTheme.images.detail_prompts
+          }
+        }
+      };
+    }
+
+    // Fallback to basic theme
     return {
       name: 'AI Generated Theme',
       settings: {
@@ -305,6 +375,42 @@ export class ShopifyService {
         }
       }
     };
+  }
+
+  private getHeaderStyle(styleClass: string): string {
+    const headerStyles: Record<string, string> = {
+      "Modern Minimal": "clean",
+      "Cozy Natural": "warm",
+      "Tech Futuristic": "minimal",
+      "Sport Performance": "bold",
+      "Luxury Elegant": "sophisticated",
+      "Street Utility": "industrial",
+      "Playful Colorful": "fun",
+      "Eco Rustic": "organic",
+      "Professional Clean": "corporate",
+      "Beauty Wellness": "elegant",
+      "Kitchen Home": "practical",
+      "Pets Friendly": "friendly"
+    };
+    return headerStyles[styleClass] || "modern";
+  }
+
+  private getFooterStyle(styleClass: string): string {
+    const footerStyles: Record<string, string> = {
+      "Modern Minimal": "minimal",
+      "Cozy Natural": "cozy",
+      "Tech Futuristic": "sleek",
+      "Sport Performance": "compact",
+      "Luxury Elegant": "refined",
+      "Street Utility": "utilitarian",
+      "Playful Colorful": "vibrant",
+      "Eco Rustic": "natural",
+      "Professional Clean": "structured",
+      "Beauty Wellness": "serene",
+      "Kitchen Home": "informative",
+      "Pets Friendly": "welcoming"
+    };
+    return footerStyles[styleClass] || "minimal";
   }
 
   private generateTags(productData: ProductData, content: GeneratedContent): string[] {
