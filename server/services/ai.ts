@@ -10,6 +10,11 @@ const premiumOpenai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY_PREMIUM || process.env.OPENAI_API_KEY || "default_key" 
 });
 
+// Dedicated API instance for image generation only
+const imageOpenai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY_IMAGES || process.env.OPENAI_API_KEY || "default_key" 
+});
+
 export interface GeneratedContent {
   productTitle: string;
   productTitleVariants: string[];
@@ -642,7 +647,7 @@ export class AIContentGenerator {
       console.log('Using GPT-4o generated prompt for GPT Image 1:', detailedPrompt);
 
       // Use GPT Image 1 only - no DALL-E 3 fallbacks
-      const imageGenResponse = await openai.images.generate({
+      const imageGenResponse = await imageOpenai.images.generate({
         model: "gpt-image-1", // GPT Image 1 only - user requirement
         prompt: detailedPrompt,
         size: "1024x1024",
@@ -741,7 +746,7 @@ export class AIContentGenerator {
       console.log('Generating premium image with style:', premiumTheme.style.primary);
       console.log('Image prompt:', heroPrompt);
 
-      const response = await premiumOpenai.images.generate({
+      const response = await imageOpenai.images.generate({
         model: "dall-e-3",
         prompt: heroPrompt,
         size: "1024x1024",
