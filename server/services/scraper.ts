@@ -130,7 +130,7 @@ export class ProductScraper {
     return {
       title: $('.product-title, .product-name, h1').first().text().trim() || 'Multifunctional Spin Scrubber Brush',
       price: $('.price, .unit-price, .current-price').first().text().trim() || '$29.99',
-      images: images.length > 0 ? images : ['https://via.placeholder.com/400x400/6366f1/ffffff?text=Product+Image'],
+      images: images,
       description: $('.product-description, .product-detail, .description').first().text().trim() || 'High-quality multifunctional spin scrubber brush for cleaning.',
       features: this.extractFeatures($, '.product-feature, .feature-list li, .advantages li'),
       specifications: this.extractSpecs($, '.specification tr, .specs tr, .product-info tr'),

@@ -148,7 +148,7 @@ export class AIContentGenerator {
       const generatedImageUrls: string[] = [];
 
       // ALWAYS use reference images with your exact ChatGPT-5 prompt - never generate from description
-      if (productData.images && productData.images.length > 0 && !productData.images[0].includes('placeholder')) {
+      if (productData.images && productData.images.length > 0) {
         console.log('Using reference images for generation with your exact ChatGPT-5 methodology');
         
         // Generate multiple images using your exact ChatGPT-5 prompt with reference
