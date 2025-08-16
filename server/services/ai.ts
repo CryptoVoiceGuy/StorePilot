@@ -237,10 +237,10 @@ export class AIContentGenerator {
     try {
       console.log('Starting GPT Image 1 generation with reference URL:', referenceImageUrl);
       
-      // First, use GPT-5 to analyze the reference image and create the perfect prompt
-      console.log('Calling GPT-5 for image analysis...');
+      // First, use GPT-4o to analyze the reference image and create the perfect prompt
+      console.log('Calling GPT-4o for image analysis...');
       const analysisResponse = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "gpt-4o", // Use GPT-4o for reliable vision analysis
         messages: [
           {
             role: "system",
@@ -262,20 +262,20 @@ export class AIContentGenerator {
             ]
           }
         ],
-        max_completion_tokens: 2000, // Increased for GPT-5 reasoning tokens + actual response
+        max_tokens: 1000, // GPT-4o uses max_tokens parameter
       });
 
-      console.log('GPT-5 full response:', JSON.stringify(analysisResponse, null, 2));
+      console.log('GPT-4o full response:', JSON.stringify(analysisResponse, null, 2));
       const detailedPrompt = analysisResponse.choices[0].message.content;
-      console.log('GPT-5 created detailed prompt:', detailedPrompt);
+      console.log('GPT-4o created detailed prompt:', detailedPrompt);
 
-      // Fail if GPT-5 doesn't provide a proper prompt - no fallbacks
+      // Fail if GPT-4o doesn't provide a proper prompt - no fallbacks
       if (!detailedPrompt || !detailedPrompt.trim()) {
-        console.error('GPT-5 failed to create image prompt - received empty response');
-        throw new Error('GPT-5 image analysis failed: No prompt generated');
+        console.error('GPT-4o failed to create image prompt - received empty response');
+        throw new Error('GPT-4o image analysis failed: No prompt generated');
       }
 
-      console.log('Using GPT-5 generated prompt for GPT Image 1:', detailedPrompt);
+      console.log('Using GPT-4o generated prompt for GPT Image 1:', detailedPrompt);
 
       // Now use GPT Image 1 for actual image generation
       const imageGenResponse = await openai.images.generate({
