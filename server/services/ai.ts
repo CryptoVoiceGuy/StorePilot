@@ -238,6 +238,7 @@ export class AIContentGenerator {
       console.log('Starting GPT Image 1 generation with reference URL:', referenceImageUrl);
       
       // First, use GPT-5 to analyze the reference image and create the perfect prompt
+      console.log('Calling GPT-5 for image analysis...');
       const analysisResponse = await openai.chat.completions.create({
         model: "gpt-5",
         messages: [
@@ -264,6 +265,7 @@ export class AIContentGenerator {
         max_completion_tokens: 500,
       });
 
+      console.log('GPT-5 full response:', JSON.stringify(analysisResponse, null, 2));
       const detailedPrompt = analysisResponse.choices[0].message.content;
       console.log('GPT-5 created detailed prompt:', detailedPrompt);
 
