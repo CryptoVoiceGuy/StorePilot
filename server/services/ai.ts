@@ -649,7 +649,7 @@ export class AIContentGenerator {
           prompt: limitedPrompt,
           n: 1,
           size: "1024x1024",
-          quality: "high",
+          quality: "high", // High quality setting for professional advertisement
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('GPT Image 1 timeout after 200 seconds')), 200000)
