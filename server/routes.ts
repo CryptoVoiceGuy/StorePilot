@@ -290,10 +290,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         premiumImages = await aiGenerator.generatePremiumImages(productData, premiumTheme);
         if (premiumImages.length > 0) {
           logs.push({ step: "image_complete", message: `Generated ${premiumImages.length} premium images`, timestamp: new Date() });
+        } else {
+          logs.push({ step: "image_warning", message: "Premium image generation returned empty - check API quota", timestamp: new Date() });
         }
       } catch (imageError) {
         console.error('Premium image generation failed:', imageError);
-        logs.push({ step: "image_warning", message: "Using original product images", timestamp: new Date() });
+        logs.push({ step: "image_warning", message: `Premium image failed: ${imageError.message}`, timestamp: new Date() });
       }
 
       // Merge premium theme design with generated content

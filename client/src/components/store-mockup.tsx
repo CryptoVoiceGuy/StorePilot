@@ -63,6 +63,21 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
     return styleClasses[style] || "bg-white text-gray-900";
   };
 
+  const dynamicStyles = {
+    backgroundColor: themeColors.background,
+    color: premiumTheme?.style.primary === "Tech Futuristic" ? "#ffffff" : "#000000"
+  };
+
+  const buttonStyle = {
+    backgroundColor: themeColors.primary,
+    borderColor: themeColors.primary,
+    color: "#ffffff"
+  };
+
+  const accentStyle = {
+    color: themeColors.accent1
+  };
+
   return (
     <Card className="overflow-hidden shadow-2xl">
       {/* Browser Header */}
@@ -127,15 +142,28 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
           </div>
           
           {/* Product Details */}
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+          <div style={dynamicStyles}>
+            <h1 
+              className="text-2xl md:text-3xl font-bold mb-4"
+              style={dynamicStyles}
+            >
               {mockProduct.title}
             </h1>
             
             <div className="flex items-center space-x-2 mb-4">
-              <span className="text-2xl font-bold text-primary">{mockProduct.price}</span>
-              <span className="text-lg text-gray-500 line-through">{mockProduct.originalPrice}</span>
-              <Badge className="bg-red-100 text-red-800 hover:bg-red-200">38% OFF</Badge>
+              <span 
+                className="text-2xl font-bold"
+                style={accentStyle}
+              >
+                {mockProduct.price}
+              </span>
+              <span className="text-lg opacity-60 line-through">{mockProduct.originalPrice}</span>
+              <Badge 
+                className="text-white border-0"
+                style={{ backgroundColor: themeColors.primary }}
+              >
+                38% OFF
+              </Badge>
             </div>
             
             <div className="flex items-center mb-4">
@@ -144,21 +172,24 @@ export function StoreMockup({ productData, generatedContent }: StoreMockupProps)
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
               </div>
-              <span className="ml-2 text-gray-600">({mockProduct.reviews.toLocaleString()} reviews)</span>
+              <span className="ml-2 opacity-70" style={dynamicStyles}>({mockProduct.reviews.toLocaleString()} reviews)</span>
             </div>
             
             <div className="space-y-2 mb-6">
               {mockProduct.features.map((feature: string, index: number) => (
                 <div key={index} className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span className="text-gray-700">{feature}</span>
+                  <Check 
+                    className="h-4 w-4 mr-2 flex-shrink-0" 
+                    style={{ color: themeColors.accent1 }}
+                  />
+                  <span style={dynamicStyles}>{feature}</span>
                 </div>
               ))}
             </div>
             
             <Button 
               className="w-full text-lg py-3 text-white font-semibold rounded-lg transition-all hover:opacity-90"
-              style={{ backgroundColor: themeColors.primary }}
+              style={{ backgroundColor: themeColors.primary, borderColor: themeColors.primary }}
             >
               Add to Cart - {mockProduct.price}
             </Button>
