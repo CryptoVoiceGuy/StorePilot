@@ -285,9 +285,8 @@ export class AIContentGenerator {
         model: "gpt-image-1", // GPT Image 1 only - user requirement
         prompt: detailedPrompt,
         size: "1024x1024",
-        quality: "high",
+        quality: "high", // Use "high" for GPT Image 1
         n: 1,
-        response_format: "b64_json", // Request base64 format for GPT Image 1
       });
 
       console.log('GPT Image 1 response structure:', imageGenResponse.data?.[0] ? JSON.stringify(imageGenResponse.data[0], null, 2) : 'No data');
