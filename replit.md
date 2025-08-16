@@ -4,11 +4,13 @@ This is an AI-powered Shopify store builder with integrated referral and OAuth s
 
 ## Recent Changes (August 16, 2025)
 - **PREMIUM THEME SYSTEM COMPLETED**: Full $100,000-quality theme generation integrated into main pipeline
-- **Triple API Key Architecture**: OPENAI_API_KEY_PREMIUM (theme analysis), OPENAI_API_KEY (content), OPENAI_API_KEY_IMAGES (image generation)
+- **Triple API Key Architecture**: OPENAI_API_KEY_PREMIUM (theme analysis), OPENAI_API_KEY (content), OPENAI_API_KEY_IMAGES (DISABLED)
 - **12 Design Classes Implemented**: Modern Minimal, Luxury Elegant, Tech Futuristic, Sport Performance, etc. mapped to free Shopify themes
-- **Style-Matched Image Generation**: DALL-E 3 creates professional product images matching selected premium themes
+- **DALL-E 3 COMPLETELY REMOVED**: No AI image generation - only authentic original product images used
 - **Premium Store Previews**: Enhanced mockups show theme confidence scores and professional styling
 - **Complete Automation**: Product URLs automatically generate premium-styled stores with appropriate themes
+- **Authentic Images Only**: System uses original scraped product photos, never generates fake AI images
+- **CRITICAL RULE**: Never use DALL-E 3 or any AI image generation - causes wrong product images
 
 # User Preferences
 

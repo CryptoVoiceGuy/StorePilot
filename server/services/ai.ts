@@ -10,10 +10,10 @@ const premiumOpenai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY_PREMIUM || process.env.OPENAI_API_KEY || "default_key" 
 });
 
-// Dedicated API instance for image generation only
-const imageOpenai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY_IMAGES || process.env.OPENAI_API_KEY || "default_key" 
-});
+// DALL-E 3 COMPLETELY REMOVED - Never use AI image generation
+// const imageOpenai = new OpenAI({ 
+//   apiKey: process.env.OPENAI_API_KEY_IMAGES || process.env.OPENAI_API_KEY || "default_key" 
+// });
 
 export interface GeneratedContent {
   productTitle: string;
@@ -148,7 +148,8 @@ export class AIContentGenerator {
       const content = JSON.parse(response.choices[0].message.content!);
       
       // Generate high-quality product images
-      const generatedImages = await this.generateProductImages(productData, content.productTitle || productData.title);
+      // DALL-E 3 DISABLED: Never generate AI images - only use authentic originals
+      const generatedImages: string[] = []; // Always empty - use original images only
       
       // Validate and set defaults if needed
       return {
@@ -582,31 +583,9 @@ export class AIContentGenerator {
 
 
 
-  private createPreciseImagePrompts(productDescription: string, productTitle: string): string[] {
-    const baseInstruction = `Professional product photograph of the exact same product: ${productTitle}. Product details: ${productDescription}`;
-    
-    return [
-      `${baseInstruction}. Studio photography with clean white background, professional lighting, commercial product shot, high resolution`,
-      `${baseInstruction}. Lifestyle photography showing the product in natural use, soft natural lighting, professional e-commerce style`,
-      `${baseInstruction}. Premium product photography with soft shadows and modern composition, clean background, emphasizing quality`,
-      `${baseInstruction}. 45-degree angle view, professional studio setup, optimal lighting to showcase the product design`,
-      `${baseInstruction}. Commercial e-commerce photography, professional lighting, clean presentation, showing the product from the best angle`
-    ];
-  }
+  // REMOVED: DALL-E 3 image prompt generation - never use AI for images
 
-  private createImagePrompts(productData: ProductData, productTitle: string): string[] {
-    const baseDescription = `Professional product photography of ${productTitle}`;
-    const features = productData.features.slice(0, 3).join(', ');
-    const category = productData.category || 'product';
-    
-    return [
-      `${baseDescription}, clean white background, studio lighting, high-resolution, commercial photography style, ${features}`,
-      `${baseDescription}, lifestyle setting, natural lighting, professional e-commerce product shot, showing the product in use`,
-      `${baseDescription}, modern minimalist composition, soft shadows, premium product photography, emphasizing quality and design`,
-      `${baseDescription}, 45-degree angle view, professional studio setup, clean background, highlighting key features: ${features}`,
-      `${baseDescription}, ${category} product shot, commercial photography, optimal lighting to showcase texture and materials`
-    ];
-  }
+  // REMOVED: DALL-E 3 image prompt generation - never use AI for images
 
   async generateProductVariations(productData: ProductData): Promise<string[]> {
     try {
@@ -646,82 +625,5 @@ export class AIContentGenerator {
     }
   }
 
-  private getStyleImagePrompts(styleClass: string): { style: string, background: string, lighting: string, composition: string } {
-    const stylePrompts: Record<string, { style: string, background: string, lighting: string, composition: string }> = {
-      "Modern Minimal": {
-        style: "Clean, minimalist",
-        background: "pure white seamless background",
-        lighting: "soft even lighting with subtle shadows",
-        composition: "centered composition with generous negative space"
-      },
-      "Luxury Elegant": {
-        style: "Luxurious, sophisticated",
-        background: "elegant marble or silk texture background",
-        lighting: "dramatic studio lighting with golden hour warmth",
-        composition: "artistic composition with premium styling elements"
-      },
-      "Cozy Natural": {
-        style: "Warm, natural",
-        background: "wooden texture or natural linen background",
-        lighting: "warm natural lighting with soft shadows",
-        composition: "cozy lifestyle setting with organic elements"
-      },
-      "Tech Futuristic": {
-        style: "Sleek, futuristic",
-        background: "dark gradient or carbon fiber texture",
-        lighting: "dramatic LED lighting with blue/purple accents",
-        composition: "high-tech environment with geometric elements"
-      },
-      "Sport Performance": {
-        style: "Dynamic, energetic",
-        background: "athletic setting or bold color gradient",
-        lighting: "high contrast lighting with dynamic shadows",
-        composition: "action-oriented with movement and energy"
-      },
-      "Street Utility": {
-        style: "Urban, industrial",
-        background: "concrete or metal texture background",
-        lighting: "harsh industrial lighting with strong contrasts",
-        composition: "utilitarian styling with urban elements"
-      },
-      "Playful Colorful": {
-        style: "Vibrant, fun",
-        background: "colorful gradient or playful pattern background",
-        lighting: "bright, cheerful lighting with rainbow accents",
-        composition: "playful arrangement with colorful props"
-      },
-      "Eco Rustic": {
-        style: "Organic, sustainable",
-        background: "natural wood or stone texture",
-        lighting: "natural outdoor lighting with green tones",
-        composition: "rustic setting with plants and natural materials"
-      },
-      "Professional Clean": {
-        style: "Corporate, professional",
-        background: "clean office or neutral corporate setting",
-        lighting: "professional studio lighting, crisp and clear",
-        composition: "business-appropriate with clean lines"
-      },
-      "Beauty Wellness": {
-        style: "Serene, spa-like",
-        background: "soft pastel or spa-inspired background",
-        lighting: "soft, flattering lighting with pink/purple tones",
-        composition: "wellness setting with calming elements"
-      },
-      "Kitchen Home": {
-        style: "Homey, practical",
-        background: "modern kitchen or home setting",
-        lighting: "warm home lighting with inviting atmosphere",
-        composition: "domestic setting with kitchen elements"
-      },
-      "Pets Friendly": {
-        style: "Cute, pet-focused",
-        background: "pet-friendly home or outdoor setting",
-        lighting: "cheerful, pet-loving lighting with warm tones",
-        composition: "pet-centric with playful, animal-friendly elements"
-      }
-    };
-
-    return stylePrompts[styleClass] || stylePrompts["Modern Minimal"];
-  }
+  // REMOVED: DALL-E 3 style image prompts - never generate AI images
 }
