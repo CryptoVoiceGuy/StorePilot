@@ -287,16 +287,25 @@ export class AIContentGenerator {
         size: "1024x1024",
         quality: "high",
         n: 1,
+        response_format: "b64_json", // Request base64 format for GPT Image 1
       });
 
-      console.log('GPT Image 1 response:', imageGenResponse.data);
+      console.log('GPT Image 1 response structure:', imageGenResponse.data?.[0] ? JSON.stringify(imageGenResponse.data[0], null, 2) : 'No data');
 
-      if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
-        console.log('Generated image URL from GPT Image 1:', imageGenResponse.data[0].url);
-        return imageGenResponse.data[0].url;
+      // GPT Image 1 returns base64 encoded images instead of URLs
+      if (imageGenResponse.data?.[0]) {
+        const imageData = imageGenResponse.data[0];
+        
+        if (imageData.url) {
+          console.log('Generated image URL from GPT Image 1:', imageData.url);
+          return imageData.url;
+        } else if (imageData.b64_json) {
+          console.log('Generated base64 image from GPT Image 1, converting to data URL');
+          return `data:image/png;base64,${imageData.b64_json}`;
+        }
       }
 
-      console.log('No image URL found in GPT Image 1 response');
+      console.log('No image URL or base64 found in GPT Image 1 response');
       return null;
       
     } catch (error) {
