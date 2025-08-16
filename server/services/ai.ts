@@ -266,7 +266,7 @@ export class AIContentGenerator {
             ]
           }
         ],
-        max_tokens: 1000,
+        max_completion_tokens: 1000, // Fixed parameter name for GPT-5
       });
 
       console.log('GPT-5 response:', response.choices[0].message.content);
@@ -290,11 +290,9 @@ export class AIContentGenerator {
       if (error instanceof Error) {
         console.error('GPT-5 error details:', error.message);
         
-        // If GPT-5 is not available, return null
-        if (error.message.includes('model') || error.message.includes('not found')) {
-          console.log('GPT-5 not available, cannot generate images without it');
-          return null;
-        }
+        // Log GPT-5 error and return null - no fallbacks
+        console.log('GPT-5 error occurred, no image generation fallback available');
+        return null;
       }
       return null;
     }
