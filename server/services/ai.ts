@@ -290,41 +290,17 @@ export class AIContentGenerator {
       if (error instanceof Error) {
         console.error('GPT-5 error details:', error.message);
         
-        // If GPT-5 is not available, fall back to GPT-4o but with strict instructions
+        // If GPT-5 is not available, return null
         if (error.message.includes('model') || error.message.includes('not found')) {
-          console.log('GPT-5 not available, falling back to GPT-4o with strict product preservation');
-          return await this.generateWithGPT4Fallback(referenceImageUrl);
+          console.log('GPT-5 not available, cannot generate images without it');
+          return null;
         }
       }
       return null;
     }
   }
 
-  async generateWithGPT4Fallback(referenceImageUrl: string): Promise<string | null> {
-    try {
-      // Strict instructions for GPT-4o to NOT change the product
-      const strictPrompt = `CRITICAL: Keep the EXACT same product shown in the reference image. Do not change the product type, design, color, or features. Only improve the photography quality, lighting, and background. The product must remain identical. Professional studio photography with clean background, commercial lighting, $1000/hour quality.`;
 
-      const imageGenResponse = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: strictPrompt,
-        size: "1024x1024",
-        quality: "hd",
-        style: "natural",
-        n: 1,
-      });
-
-      if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
-        console.log('Fallback image generated:', imageGenResponse.data[0].url);
-        return imageGenResponse.data[0].url;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Fallback image generation failed:', error);
-      return null;
-    }
-  }
 
   private createPreciseImagePrompts(productDescription: string, productTitle: string): string[] {
     const baseInstruction = `Professional product photograph of the exact same product: ${productTitle}. Product details: ${productDescription}`;
