@@ -262,7 +262,7 @@ export class AIContentGenerator {
             ]
           }
         ],
-        max_completion_tokens: 500,
+        max_completion_tokens: 2000, // Increased for GPT-5 reasoning tokens + actual response
       });
 
       console.log('GPT-5 full response:', JSON.stringify(analysisResponse, null, 2));
