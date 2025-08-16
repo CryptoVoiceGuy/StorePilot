@@ -5,6 +5,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key" 
 });
 
+// Premium API instance for theme generation
+const premiumOpenai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY_PREMIUM || process.env.OPENAI_API_KEY || "default_key" 
+});
+
 export interface GeneratedContent {
   productTitle: string;
   productTitleVariants: string[];
@@ -331,7 +336,7 @@ export class AIContentGenerator {
         }
       `;
 
-      const response = await openai.chat.completions.create({
+      const response = await premiumOpenai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
