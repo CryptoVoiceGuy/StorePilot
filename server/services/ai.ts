@@ -136,7 +136,7 @@ export class AIContentGenerator {
       heroHeadline: `Get Your ${productData.title} Today`,
       heroSubheadline: "Premium quality, fast delivery, satisfaction guaranteed.",
       callToAction: "Buy Now",
-      generatedImages: productData.images // Use scraped images as fallback
+      generatedImages: [] // No fallback images allowed
     };
   }
 
@@ -165,17 +165,20 @@ export class AIContentGenerator {
           }
         }
       } else {
-        console.log('No valid reference images found - returning original images to avoid creating wrong products');
-        return productData.images; // Never generate new products, only use originals
+        console.log('No valid reference images found - failing image generation');
+        throw new Error('No reference images available for image generation');
       }
 
       console.log(`Generated ${generatedImageUrls.length} images out of 3 attempts`);
 
-      // Return generated images if any, otherwise return original images
-      return generatedImageUrls.length > 0 ? generatedImageUrls : productData.images;
+      // Return generated images only - no fallbacks
+      if (generatedImageUrls.length === 0) {
+        throw new Error('Failed to generate any images - no fallbacks allowed');
+      }
+      return generatedImageUrls;
     } catch (error) {
       console.error('Image generation process failed:', error);
-      return productData.images;
+      throw error; // No fallbacks - fail completely
     }
   }
 
