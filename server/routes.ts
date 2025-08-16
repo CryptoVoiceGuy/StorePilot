@@ -281,6 +281,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const generatedContent = await aiGenerator.generateStoreContent(productData, params.targetMarket);
       
+      // Generate premium images that match the selected theme
+      logs.push({ step: "image_generation", message: `Generating premium ${premiumTheme.style.primary} style images...`, timestamp: new Date() });
+      await storage.updateProject(projectId, { buildLogs: logs });
+      
+      let premiumImages: string[] = [];
+      try {
+        premiumImages = await aiGenerator.generatePremiumImages(productData, premiumTheme);
+        if (premiumImages.length > 0) {
+          logs.push({ step: "image_complete", message: `Generated ${premiumImages.length} premium images`, timestamp: new Date() });
+        }
+      } catch (imageError) {
+        console.error('Premium image generation failed:', imageError);
+        logs.push({ step: "image_warning", message: "Using original product images", timestamp: new Date() });
+      }
+
       // Merge premium theme design with generated content
       const enhancedContent = {
         ...generatedContent,
@@ -291,6 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         callToAction: premiumTheme.copy.hero.cta || generatedContent.callToAction,
         features: premiumTheme.copy.bullets || generatedContent.features,
         productDescription: premiumTheme.copy.description || generatedContent.productDescription,
+        generatedImages: premiumImages.length > 0 ? premiumImages : productData.images,
         brandColors: {
           primary: premiumTheme.palette.primary,
           secondary: premiumTheme.palette.accent_1,

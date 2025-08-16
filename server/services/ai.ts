@@ -729,4 +729,109 @@ export class AIContentGenerator {
       return [productData.title];
     }
   }
+
+  async generatePremiumImages(productData: ProductData, premiumTheme: PremiumThemeDesign): Promise<string[]> {
+    try {
+      // Get style-specific image generation prompts
+      const stylePrompts = this.getStyleImagePrompts(premiumTheme.style.primary);
+      
+      // Generate hero image with premium styling
+      const heroPrompt = `${stylePrompts.style} product photography of ${productData.title}, ${stylePrompts.background}, ${stylePrompts.lighting}, ${stylePrompts.composition}, professional commercial photography, high-end ${premiumTheme.style.primary.toLowerCase()} aesthetic`;
+
+      console.log('Generating premium image with style:', premiumTheme.style.primary);
+      console.log('Image prompt:', heroPrompt);
+
+      const response = await premiumOpenai.images.generate({
+        model: "dall-e-3",
+        prompt: heroPrompt,
+        size: "1024x1024",
+        quality: "hd",
+        n: 1,
+      });
+
+      return [response.data[0].url || ''];
+    } catch (error) {
+      console.error('Premium image generation failed:', error);
+      return [];
+    }
+  }
+
+  private getStyleImagePrompts(styleClass: string): { style: string, background: string, lighting: string, composition: string } {
+    const stylePrompts: Record<string, { style: string, background: string, lighting: string, composition: string }> = {
+      "Modern Minimal": {
+        style: "Clean, minimalist",
+        background: "pure white seamless background",
+        lighting: "soft even lighting with subtle shadows",
+        composition: "centered composition with generous negative space"
+      },
+      "Luxury Elegant": {
+        style: "Luxurious, sophisticated",
+        background: "elegant marble or silk texture background",
+        lighting: "dramatic studio lighting with golden hour warmth",
+        composition: "artistic composition with premium styling elements"
+      },
+      "Cozy Natural": {
+        style: "Warm, natural",
+        background: "wooden texture or natural linen background",
+        lighting: "warm natural lighting with soft shadows",
+        composition: "cozy lifestyle setting with organic elements"
+      },
+      "Tech Futuristic": {
+        style: "Sleek, futuristic",
+        background: "dark gradient or carbon fiber texture",
+        lighting: "dramatic LED lighting with blue/purple accents",
+        composition: "high-tech environment with geometric elements"
+      },
+      "Sport Performance": {
+        style: "Dynamic, energetic",
+        background: "athletic setting or bold color gradient",
+        lighting: "high contrast lighting with dynamic shadows",
+        composition: "action-oriented with movement and energy"
+      },
+      "Street Utility": {
+        style: "Urban, industrial",
+        background: "concrete or metal texture background",
+        lighting: "harsh industrial lighting with strong contrasts",
+        composition: "utilitarian styling with urban elements"
+      },
+      "Playful Colorful": {
+        style: "Vibrant, fun",
+        background: "colorful gradient or playful pattern background",
+        lighting: "bright, cheerful lighting with rainbow accents",
+        composition: "playful arrangement with colorful props"
+      },
+      "Eco Rustic": {
+        style: "Organic, sustainable",
+        background: "natural wood or stone texture",
+        lighting: "natural outdoor lighting with green tones",
+        composition: "rustic setting with plants and natural materials"
+      },
+      "Professional Clean": {
+        style: "Corporate, professional",
+        background: "clean office or neutral corporate setting",
+        lighting: "professional studio lighting, crisp and clear",
+        composition: "business-appropriate with clean lines"
+      },
+      "Beauty Wellness": {
+        style: "Serene, spa-like",
+        background: "soft pastel or spa-inspired background",
+        lighting: "soft, flattering lighting with pink/purple tones",
+        composition: "wellness setting with calming elements"
+      },
+      "Kitchen Home": {
+        style: "Homey, practical",
+        background: "modern kitchen or home setting",
+        lighting: "warm home lighting with inviting atmosphere",
+        composition: "domestic setting with kitchen elements"
+      },
+      "Pets Friendly": {
+        style: "Cute, pet-focused",
+        background: "pet-friendly home or outdoor setting",
+        lighting: "cheerful, pet-loving lighting with warm tones",
+        composition: "pet-centric with playful, animal-friendly elements"
+      }
+    };
+
+    return stylePrompts[styleClass] || stylePrompts["Modern Minimal"];
+  }
 }
