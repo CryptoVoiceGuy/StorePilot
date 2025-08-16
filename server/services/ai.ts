@@ -235,27 +235,22 @@ export class AIContentGenerator {
 
   async generateImageWithChatGPT(referenceImageUrl: string, prompt: string): Promise<string | null> {
     try {
-      console.log('Starting GPT-5 image generation with reference URL:', referenceImageUrl);
+      console.log('Starting GPT Image 1 generation with reference URL:', referenceImageUrl);
       
-      // Use GPT-5 with your exact methodology - using the chat completions API for image generation
-      const exactPrompt = "Act as an advertising executive and re create this advert. Keep the product in this image the exact same and come up with a new advertisment. The image is to be high studio quality and would be considered to be done by a professional charging $1000 per hour";
-
-      console.log('Using GPT-5 with exact prompt:', exactPrompt);
-
-      // Use GPT-5 for image generation through chat completions with multimodal capabilities
-      const response = await openai.chat.completions.create({
-        model: "gpt-5", // Use GPT-5 for image generation
+      // First, use GPT-5 to analyze the reference image and create the perfect prompt
+      const analysisResponse = await openai.chat.completions.create({
+        model: "gpt-5",
         messages: [
           {
             role: "system",
-            content: "You are GPT-5 with advanced image generation capabilities. When given a reference image and instructions, generate a new professional advertisement image that keeps the exact same product while improving the photography and presentation. Use the /create command functionality to generate high-quality images."
+            content: "You are an expert advertising executive. Analyze the reference image and create a precise prompt for recreating this advertisement while keeping the exact same product. Your prompt should ensure the product remains identical while improving photography quality."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: exactPrompt
+                text: "Act as an advertising executive and re create this advert. Keep the product in this image the exact same and come up with a new advertisment. The image is to be high studio quality and would be considered to be done by a professional charging $1000 per hour. Create a detailed prompt that ensures the product stays identical."
               },
               {
                 type: "image_url",
@@ -266,33 +261,35 @@ export class AIContentGenerator {
             ]
           }
         ],
-        max_completion_tokens: 1000, // Fixed parameter name for GPT-5
+        max_completion_tokens: 500,
       });
 
-      console.log('GPT-5 response:', response.choices[0].message.content);
+      const detailedPrompt = analysisResponse.choices[0].message.content;
+      console.log('GPT-5 created detailed prompt:', detailedPrompt);
 
-      // GPT-5 should return image URLs in its response when using image generation
-      const content = response.choices[0].message.content;
-      if (content) {
-        // Look for image URLs in the response
-        const imageUrlMatch = content.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|webp)/i);
-        if (imageUrlMatch) {
-          console.log('Generated image URL from GPT-5:', imageUrlMatch[0]);
-          return imageUrlMatch[0];
-        }
+      // Now use GPT Image 1 for actual image generation
+      const imageGenResponse = await openai.images.generate({
+        model: "gpt-image-1", // Use GPT Image 1 for generation
+        prompt: detailedPrompt || "Professional product photography with studio lighting, clean background, commercial quality, $1000/hour professional standard",
+        size: "1024x1024",
+        quality: "standard",
+        n: 1,
+      });
+
+      console.log('GPT Image 1 response:', imageGenResponse.data);
+
+      if (imageGenResponse.data && imageGenResponse.data[0]?.url) {
+        console.log('Generated image URL from GPT Image 1:', imageGenResponse.data[0].url);
+        return imageGenResponse.data[0].url;
       }
 
-      console.log('No image URL found in GPT-5 response');
+      console.log('No image URL found in GPT Image 1 response');
       return null;
       
     } catch (error) {
-      console.error('GPT-5 image generation failed:', error);
+      console.error('GPT Image 1 generation failed:', error);
       if (error instanceof Error) {
-        console.error('GPT-5 error details:', error.message);
-        
-        // Log GPT-5 error and return null - no fallbacks
-        console.log('GPT-5 error occurred, no image generation fallback available');
-        return null;
+        console.error('GPT Image 1 error details:', error.message);
       }
       return null;
     }
