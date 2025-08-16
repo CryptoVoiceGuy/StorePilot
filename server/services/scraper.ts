@@ -84,6 +84,16 @@ export class ProductScraper {
 
   private async scrapeAlibaba(url: string): Promise<ProductData> {
     console.log('Scraping Alibaba URL:', url);
+    
+    // Extract product image from URL parameter first (most reliable)
+    let images: string[] = [];
+    const urlParams = new URL(url).searchParams;
+    const detailProductImg = urlParams.get('__detailProductImg');
+    if (detailProductImg) {
+      console.log('Found product image in URL:', detailProductImg);
+      images.push(detailProductImg);
+    }
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -97,35 +107,27 @@ export class ProductScraper {
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    // Extract images from JSON-LD structured data first (most reliable for Alibaba)
-    let images: string[] = [];
-    
-    // Look for JSON-LD structured data containing image URLs
-    $('script[type="application/ld+json"]').each((_, el) => {
-      try {
-        const jsonData = JSON.parse($(el).html() || '{}');
-        if (jsonData.image && Array.isArray(jsonData.image)) {
-          images.push(...jsonData.image);
-        }
-      } catch (e) {
-        // Continue if JSON parsing fails
-      }
+    // Extract more product images from DOM (but filter out logos/banners)
+    const additionalImages = this.extractImages($, [
+      '.main-image img',
+      '.thumb-image img', 
+      '.product-image img',
+      '.gallery-main img',
+      '.slider-image img',
+      'img[src*="kf/H"]' // Alibaba product images often have this pattern
+    ]).filter(img => {
+      // Filter out logos, banners, and non-product images
+      const isLogo = img.includes('alibaba') || img.includes('logo') || img.includes('banner');
+      const isTooSmall = img.includes('_80x80') || img.includes('48-48');
+      const isFlag = img.includes('flags') || img.includes('cn.png');
+      const isSystemImage = img.includes('imgextra/i1/O1CN01e5zQ2S1cAWz26ivMo') || 
+                           img.includes('imgextra/i1/O1CN01N7i3h3251TzKTEmhE');
+      
+      return !isLogo && !isTooSmall && !isFlag && !isSystemImage;
     });
     
-    // Fallback to DOM selectors if no images found in JSON-LD
-    if (images.length === 0) {
-      images = this.extractImages($, [
-        '.main-image img',
-        '.thumb-image img', 
-        '.product-image img',
-        'img[src*="alicdn.com"]',
-        'img[src*="product"]',
-        '.gallery-main img',
-        '.slider-image img'
-      ]);
-    }
-    
-    console.log('Extracted Alibaba images:', images);
+    images.push(...additionalImages);
+    console.log('Filtered Alibaba product images:', images);
     
     return {
       title: $('.product-title, .product-name, h1').first().text().trim() || 'Multifunctional Spin Scrubber Brush',
