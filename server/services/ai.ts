@@ -181,7 +181,26 @@ export class AIContentGenerator {
         heroHeadline: content.heroHeadline || `Transform Your Life with ${content.productTitle}`,
         heroSubheadline: content.heroSubheadline || "Premium quality, unbeatable value, fast delivery.",
         callToAction: content.callToAction || "Order Now",
-        generatedImages: this.combineGeneratedAndOriginalImages(advertisementConcepts, productData.images), // GPT Image 1 images first, then originals
+        generatedImages: (() => {
+          console.log('🔍 PRIORITIZING IMAGES: GPT Image 1 first, then originals');
+          console.log('📊 Advertisement URLs:', JSON.stringify(advertisementConcepts));
+          console.log('📷 Original URLs:', JSON.stringify(productData.images));
+          
+          // Filter valid GPT Image 1 URLs
+          const validGeneratedImages = advertisementConcepts.filter(url => url && url.startsWith('http'));
+          
+          let prioritizedImages;
+          if (validGeneratedImages.length > 0) {
+            console.log(`✅ USING ${validGeneratedImages.length} GPT IMAGE 1 ADVERTISEMENTS AS PRIMARY`);
+            prioritizedImages = [...validGeneratedImages, ...productData.images].slice(0, 6);
+          } else {
+            console.log('⚠️ NO GPT IMAGE 1 - USING ORIGINAL IMAGES ONLY');
+            prioritizedImages = productData.images.slice(0, 6);
+          }
+          
+          console.log('🎯 FINAL PRIORITIZED IMAGES:', JSON.stringify(prioritizedImages));
+          return prioritizedImages;
+        })(),
         advertisementConcepts: advertisementConcepts // Professional ad images from GPT Image 1
       };
     } catch (error) {
@@ -592,6 +611,8 @@ export class AIContentGenerator {
   async generateProfessionalAdvertisement(imageUrl: string, productTitle: string): Promise<string | null> {
     try {
       console.log('Creating professional advertisement image with GPT Image 1...');
+
+      // GPT Image 1 ready for production - will prioritize generated images when OpenAI API is functional
       
       // First, analyze the original image with GPT-4o
       const analysisResponse = await openai.chat.completions.create({
@@ -657,15 +678,32 @@ export class AIContentGenerator {
       ]) as any;
 
       console.log('GPT Image 1 response received, checking for image URL...');
+      console.log('Response type:', typeof imageResponse);
+      console.log('Response keys:', Object.keys(imageResponse || {}));
+      
+      // Check for corruption in the response
+      const responseStr = JSON.stringify(imageResponse);
+      if (responseStr.length > 100000) {
+        console.log('⚠️ Large response detected, checking for corruption...');
+        const firstChunk = responseStr.substring(0, 1000);
+        console.log('First 1000 chars of response:', firstChunk);
+        
+        // Check for repeated characters (corruption indicator)
+        const repeatedChars = (responseStr.match(/A{100,}/g) || []).length;
+        if (repeatedChars > 0) {
+          console.log('🚨 GPT Image 1 API CORRUPTION DETECTED - Response contains repeated characters');
+          console.log('Corruption instances found:', repeatedChars);
+          return null;
+        }
+      }
       
       const generatedImageUrl = imageResponse.data?.[0]?.url;
-      if (generatedImageUrl) {
-        console.log('Professional advertisement image generated successfully:', generatedImageUrl);
+      if (generatedImageUrl && generatedImageUrl.startsWith('http')) {
+        console.log('✅ GPT Image 1 SUCCESS! Professional advertisement generated:', generatedImageUrl.substring(0, 100) + '...');
         return generatedImageUrl;
       } else {
-        console.log('No image URL returned from GPT Image 1');
-        console.log('Response structure keys:', Object.keys(imageResponse));
-        console.log('Response data:', imageResponse.data);
+        console.log('❌ No valid image URL returned from GPT Image 1');
+        console.log('Data structure:', imageResponse.data);
         return null;
       }
     } catch (error) {
@@ -730,7 +768,9 @@ export class AIContentGenerator {
     if (validGeneratedImages.length > 0) {
       console.log(`Using ${validGeneratedImages.length} GPT Image 1 generated advertisement images as primary`);
       // Use GPT Image 1 images first, then fill with originals if needed
-      return [...validGeneratedImages, ...originalImages].slice(0, 6); // Max 6 images total
+      const prioritizedImages = [...validGeneratedImages, ...originalImages].slice(0, 6);
+      console.log('🎯 PRIORITIZED IMAGES (GPT Image 1 first):', prioritizedImages);
+      return prioritizedImages;
     } else {
       console.log('USING AUTHENTIC ORIGINAL IMAGES - No AI generation whatsoever');
       return originalImages.slice(0, 6); // Use original images only
