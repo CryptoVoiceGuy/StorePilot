@@ -181,7 +181,7 @@ export class AIContentGenerator {
         heroHeadline: content.heroHeadline || `Transform Your Life with ${content.productTitle}`,
         heroSubheadline: content.heroSubheadline || "Premium quality, unbeatable value, fast delivery.",
         callToAction: content.callToAction || "Order Now",
-        generatedImages: productData.images.concat(advertisementConcepts.filter(url => url && url.startsWith('http'))), // Original + generated images
+        generatedImages: this.combineGeneratedAndOriginalImages(advertisementConcepts, productData.images), // GPT Image 1 images first, then originals
         advertisementConcepts: advertisementConcepts // Professional ad images from GPT Image 1
       };
     } catch (error) {
@@ -722,4 +722,18 @@ export class AIContentGenerator {
   }
 
   // REMOVED: DALL-E 3 style image prompts - never generate AI images
+
+  private combineGeneratedAndOriginalImages(advertisementConcepts: string[], originalImages: string[]): string[] {
+    // Filter valid GPT Image 1 URLs
+    const validGeneratedImages = advertisementConcepts.filter(url => url && url.startsWith('http'));
+    
+    if (validGeneratedImages.length > 0) {
+      console.log(`Using ${validGeneratedImages.length} GPT Image 1 generated advertisement images as primary`);
+      // Use GPT Image 1 images first, then fill with originals if needed
+      return [...validGeneratedImages, ...originalImages].slice(0, 6); // Max 6 images total
+    } else {
+      console.log('USING AUTHENTIC ORIGINAL IMAGES - No AI generation whatsoever');
+      return originalImages.slice(0, 6); // Use original images only
+    }
+  }
 }
