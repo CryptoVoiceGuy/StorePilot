@@ -173,7 +173,7 @@ def rotation(p, top_k, lookback, regime_n=200):
     regime = close["BTC"] > close["BTC"].rolling(regime_n).mean()
     w = pd.DataFrame(np.nan, index=close.index, columns=close.columns)
     for day in close.index:
-        if day.dayofweek == 0:
+        if day.day_of_week == 0:
             m = mom.loc[day].where(elig.loc[day] & (mom.loc[day] > 0)).dropna()
             picks = m.nlargest(top_k).index
             row = pd.Series(0.0, index=close.columns)
