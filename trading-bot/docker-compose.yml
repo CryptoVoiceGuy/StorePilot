@@ -1,19 +1,26 @@
-# Runs the trading bot 24/7 in paper-trading (dry-run) mode.
+# Two services, both running 24/7 in paper-trading (dry-run) mode:
+#   freqtrade  - the trading bot (retrains its model every 6 hours)
+#   improver   - the self-improvement loop: changes one setting at a time,
+#                tests it, and keeps it only if it is better
 # Use ./bot.sh instead of calling this directly; it fills in the user IDs below.
+
+x-common: &common
+  # Pinned version: the strategy was tested against this exact release.
+  image: freqtradeorg/freqtrade:2026.10_freqai
+  restart: unless-stopped          # comes back by itself after crashes or reboots
+  # Run as your own user so files in user_data stay yours (avoids permission errors on Linux).
+  user: "${FT_UID:-1000}:${FT_GID:-1000}"
+  volumes:
+    - "./user_data:/freqtrade/user_data"
+    - "./scripts:/freqtrade/storepilot_scripts:ro"
+
 services:
   freqtrade:
-    # Pinned version: the strategy was tested against this exact release.
-    image: freqtradeorg/freqtrade:2026.10_freqai
+    <<: *common
     container_name: storepilot-trading-bot
-    restart: unless-stopped          # comes back by itself after crashes or reboots
-    # Run as your own user so files in user_data stay yours (avoids permission errors on Linux).
-    user: "${FT_UID:-1000}:${FT_GID:-1000}"
     environment:
       # The image installs freqtrade under ftuser; let any user ID find it.
       PYTHONUSERBASE: /home/ftuser/.local
-    volumes:
-      - "./user_data:/freqtrade/user_data"
-      - "./scripts:/freqtrade/storepilot_scripts:ro"
     ports:
       # Dashboard, only reachable from this computer: http://localhost:8080
       - "127.0.0.1:8080:8080"
@@ -22,4 +29,16 @@ services:
       --logfile /freqtrade/user_data/logs/freqtrade.log
       --db-url sqlite:////freqtrade/user_data/tradesv3.dryrun.sqlite
       --config /freqtrade/user_data/config.json
+      --config /freqtrade/user_data/config.baseline.json
       --config /freqtrade/user_data/config.private.json
+
+  improver:
+    <<: *common
+    container_name: storepilot-improver
+    depends_on: [freqtrade]
+    environment:
+      PYTHONUSERBASE: /home/ftuser/.local
+      BOT_API_URL: http://freqtrade:8080
+    # Low CPU priority so experiments never slow down the trading bot.
+    entrypoint: ["nice", "-n", "15", "python", "/freqtrade/storepilot_scripts/improver.py"]
+    command: ["loop"]

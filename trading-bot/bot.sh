@@ -44,17 +44,28 @@ show_login() {
   echo "Dashboard: http://localhost:8080   username: $user   password: $pass"
 }
 
+ensure_baseline() {
+  # Settings the self-improvement loop has proven better; starts empty.
+  [[ -f user_data/config.baseline.json ]] || echo '{}' >user_data/config.baseline.json
+}
+
 download_history() {
   $COMPOSE run --rm --no-deps --entrypoint python freqtrade \
     /freqtrade/storepilot_scripts/download_history.py "$@"
+}
+
+improver() {
+  $COMPOSE run --rm --no-deps --entrypoint python improver \
+    /freqtrade/storepilot_scripts/improver.py "$@"
 }
 
 case "${1:-help}" in
   setup)
     mkdir -p user_data/logs user_data/data
     ensure_private_config
+    ensure_baseline
     $COMPOSE pull
-    echo "Downloading ~15 months of price history (takes under a minute)..."
+    echo "Downloading ~16 months of price history (takes under a minute)..."
     download_history
     echo "Setup done. Next: ./bot.sh backtest   or   ./bot.sh start"
     ;;
@@ -64,16 +75,21 @@ case "${1:-help}" in
   backtest)
     # Default: the last 365 days, retraining weekly exactly like the live bot.
     # The fee is Kraken's worst-case 0.4% per buy or sell.
+    # Uses the current baseline, i.e. including every improvement kept so far.
+    ensure_baseline
     timerange="${2:-$(days_ago 365)-}"
     $COMPOSE run --rm --no-deps freqtrade backtesting \
       --config /freqtrade/user_data/config.json \
+      --config /freqtrade/user_data/config.baseline.json \
       --timerange "$timerange" --fee 0.004 --cache none --export trades
     ;;
   start)
     ensure_private_config
+    ensure_baseline
     mkdir -p user_data/logs
     $COMPOSE up -d
     echo "Bot started in PAPER-TRADING mode (no real money)."
+    echo "The self-improvement loop is running too: ./bot.sh experiments shows what it has tried."
     show_login
     ;;
   stop)
@@ -83,7 +99,19 @@ case "${1:-help}" in
     $COMPOSE restart
     ;;
   logs)
-    $COMPOSE logs -f --tail 100
+    # ./bot.sh logs            -> both
+    # ./bot.sh logs improver   -> only the self-improvement loop
+    $COMPOSE logs -f --tail 100 "${@:2}"
+    ;;
+  experiments)
+    improver report "${@:2}"
+    ;;
+  improve-once)
+    ensure_baseline
+    improver once
+    ;;
+  approve)
+    improver approve
     ;;
   status)
     $COMPOSE ps
@@ -96,14 +124,18 @@ case "${1:-help}" in
 Usage: ./bot.sh <command>
 
   setup         First-time setup: dashboard password, Docker image, price history
-  backtest      Replay the last year with the self-learning model (optional: a
+  backtest      Replay the last year with the current settings (optional: a
                 timerange like 20260101-20260601)
-  start         Start paper trading 24/7 in the background
-  stop          Stop the bot
-  restart       Restart the bot (e.g. after editing config.json)
-  logs          Watch what the bot is doing right now (Ctrl+C to stop watching)
+  start         Start paper trading + the self-improvement loop, 24/7
+  stop          Stop everything
+  restart       Restart (e.g. after editing config.json)
+  logs          Watch what it is doing right now (Ctrl+C to stop watching);
+                "./bot.sh logs improver" shows only the experiments
   status        Is it running?
   login         Show the dashboard address and password
+  experiments   What the self-improvement loop has tried, kept and thrown away
+  improve-once  Run one experiment now (in the foreground)
+  approve       Real-money mode only: put the latest proven improvement live
   update-data   Re-download price history
 EOF
     ;;

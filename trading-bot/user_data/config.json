@@ -87,6 +87,15 @@
     }
   },
 
+  "stoploss": -0.05,
+  "trailing_stop_positive_offset": 0.025,
+  "selflearning": {
+    "min_edge": 0.012,
+    "signal_strength": 1.0,
+    "streak_lookback": 6,
+    "streak_penalty": 1.5
+  },
+
   "initial_state": "running",
   "internals": {
     "process_throttle_secs": 5

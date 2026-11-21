@@ -2,7 +2,9 @@
 
 A crypto trading bot that runs 24/7, retrains its own machine-learning model on
 the newest market data every few hours, and paper-trades BTC, ETH and SOL on
-Kraken with a pretend $50 wallet.
+Kraken with a pretend $50 wallet. Alongside it, a second process keeps
+experimenting with the bot's settings **like a scientist**. It changes one thing
+at a time, tests it, and keeps the change only if it proves better.
 
 It is built on [freqtrade](https://github.com/freqtrade/freqtrade) (57k GitHub
 stars, free, open source) and its machine-learning module
@@ -29,6 +31,56 @@ stars, free, open source) and its machine-learning module
 Every hour the model answers one question for each coin: *"Over the next 12 hours,
 how far above or below today's price will the average price be?"* If the answer
 is a clear "up", it buys. When the answer turns to "down", it sells.
+
+## How it improves itself (the scientific method)
+
+The improver (`scripts/improver.py`) runs this loop forever:
+
+```
+  1. CHANGE 1 VARIABLE  ->  2. TEST          ->  3. MEASURE          ->  4. NEW BASELINE
+     exactly one setting     replay months of     score it against       keep it only if it
+     moved one step          prices, retraining   the goal and the       wins; otherwise
+                             weekly like live     current baseline       throw it away
+        ^                                                                     |
+        +------------- the next change starts from the (new) baseline --------+
+```
+
+- **The goal** (in `user_data/improver.json`): *profit after fees, minus half of
+  the worst drop.* A change that earns a bit more but risks a lot more doesn't count.
+- **What it may change:** 14 settings, including the buy threshold, stop-loss, how
+  many days the model trains on, how far ahead it predicts, and model size.
+  Each experiment moves exactly one of them one step up or down from the current baseline.
+- **Two tests, not one.** A change is first tested on older months (the
+  "search" window, about 8 months). If it wins there, it must **also** win on the
+  most recent 4 months, which played no part in choosing it. Most changes that
+  look good by luck fail this second test.
+- **Rules against fooling itself:** it must beat the baseline by a clear margin
+  (2 points), it must make enough trades to count (at least 15, then 6), and every
+  experiment is recorded, including failures.
+- **It never stops.** Each kept change becomes the new baseline that later
+  experiments build on. When every one-step change has been tried, it waits for a
+  new week of market data and starts again, because the market keeps changing.
+- **Going live:** in paper-trading mode a proven change goes live straight away
+  (the running bot reloads its settings and trains a fresh model). In real-money
+  mode it waits for you to run `./bot.sh approve`.
+
+See what it has done with `./bot.sh experiments`. These are its first three real
+experiments (Nov 2026). All three made things worse, so all three were thrown away:
+
+```
+Current baseline: B0 (since 2026-11-21) - starting settings
+  Same as config.json: no change has passed the test yet.
+
+Experiments: 3 run, 0 kept, 3 discarded or failed.
+
+ID    Date       Base Change                                     Search score       Confirm score  Result
+E1    2026-11-21 B0   selflearning.min_edge 0.012 -> 0.01        -26.07 -> -36.36   -              DISCARDED
+E2    2026-11-21 B0   selflearning.signal_strength 1.0 -> 0.5    -26.07 -> -33.65   -              DISCARDED
+E3    2026-11-21 B0   selflearning.streak_penalty 1.5 -> 1.25    -26.07 -> -46.02   -              DISCARDED
+```
+
+Each experiment takes about 1.5–5 minutes of computer time. It runs at low priority
+so it never slows the trading bot, with a 15-minute pause between experiments.
 
 ## Safety rules built in
 
@@ -69,9 +121,10 @@ What this tells us:
 - **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (Mac,
   Windows or Linux). It runs the bot in a sealed box with everything installed.
 - **A computer that stays on**, for 24/7 running. Either your own computer
-  (don't let it sleep) or a small cloud server (about $5–6 a month, with 2 GB
-  RAM recommended). On a $50 account, a $5 server costs 10% of your money every
-  month. Run it on your own computer while it's in paper mode.
+  (don't let it sleep) or a small cloud server (4 GB RAM recommended, because the
+  bot and the improver run side by side; roughly $10–20 a month). On a $50
+  account a server costs more than the bot could plausibly earn, so run it on your
+  own computer while it's in paper mode.
 - On Windows, run the commands below in **WSL** or **Git Bash**.
 
 ## Quick start
@@ -80,14 +133,16 @@ What this tells us:
 cd trading-bot
 ./bot.sh setup      # creates a dashboard password, downloads the bot and price history
 ./bot.sh backtest   # optional: replay the last year to see how it would have done
-./bot.sh start      # starts paper trading 24/7 in the background
+./bot.sh start      # starts paper trading + the self-improvement loop, 24/7
 ./bot.sh login      # shows the dashboard address and password
 ```
 
 Then open **http://localhost:8080** in your browser and log in.
 
-Other commands: `./bot.sh logs` (watch it live), `./bot.sh status`,
-`./bot.sh stop`, `./bot.sh restart` (after editing settings).
+Other commands: `./bot.sh experiments` (what the improver tried and kept),
+`./bot.sh logs` (watch it live; `./bot.sh logs improver` for only the
+experiments), `./bot.sh status`, `./bot.sh stop`, `./bot.sh restart` (after
+editing settings). Run `./bot.sh` on its own to see them all.
 
 The bot restarts by itself after a crash or a computer reboot. Keep Docker
 Desktop set to start when you log in.
@@ -117,17 +172,17 @@ withdrawal permission**. Put the key and secret in `user_data/config.private.jso
 under `"exchange"`, set `"dry_run": false` there, and start with an amount you'd
 be fine losing completely.
 
-## Ideas for making it self-improving
+## Ideas for what to add next
 
-Possible next steps, from most to least useful:
+Each of these would plug into the improver as one more "variable" to test:
 
-1. **Automatic re-tuning.** Once a week, re-optimize the buy threshold on the latest
-   data, and only keep the new settings if they also do better on data they weren't
-   tuned on.
-2. **Model tournament.** Train several kinds of models side by side in paper mode
-   and automatically promote whichever has done best over the last month.
-3. **News and sentiment.** Add a "how positive is crypto news right now" score as
-   an extra input. Then test whether it actually helps, because it usually adds noise.
+1. **Model tournament.** Let the improver also swap the kind of model (LightGBM,
+   XGBoost, CatBoost) and keep whichever wins.
+2. **News and sentiment.** Add a "how positive is crypto news right now" score as
+   an extra input. Then let the improver test whether it actually helps, because
+   it usually adds noise.
+3. **Live paper results as the final test.** Promote a change only after it has
+   also beaten the old settings in a few weeks of side-by-side paper trading.
 4. **Reinforcement learning.** FreqAI has a mode where the bot learns by trial and
    error in simulation. It's powerful, but it overfits easily.
 
@@ -136,12 +191,16 @@ Possible next steps, from most to least useful:
 ```
 trading-bot/
 ├── bot.sh                     # the one-word commands
-├── docker-compose.yml         # how Docker runs the bot 24/7
+├── docker-compose.yml         # runs the bot and the improver 24/7
 ├── scripts/
-│   └── download_history.py    # fetches price history (see note below)
+│   ├── download_history.py    # fetches price history (see note below)
+│   └── improver.py            # the self-improvement loop
 └── user_data/
-    ├── config.json            # all settings (pairs, wallet, risk, learning)
+    ├── config.json            # starting settings (pairs, wallet, risk, learning)
+    ├── improver.json          # the improver's goal, test windows and the variables it may change
+    ├── config.baseline.json   # changes the improver has proven better (created automatically)
     ├── config.private.json    # your password/keys, created by setup, never committed
+    ├── experiments/           # the improver's lab notebook: journal.jsonl + state
     └── strategies/
         └── SelfLearningStrategy.py   # the brain: features, predictions, buy/sell rules
 ```
@@ -163,4 +222,12 @@ trading-bot/
   distance from moving averages, volatility, Bollinger position, on 1h and 4h
   candles, plus BTC as a market signal). It retrains every 6 hours live and every
   7 days in backtests.
+- **Improver internals:** settings are layered as `config.json`, then
+  `config.baseline.json`, then `config.private.json`, with later files winning.
+  Every experiment backtest uses its own model folder, which is deleted afterwards.
+  Each live baseline gets a fresh one too, so a model is never reused with
+  different inputs. Price history is re-downloaded from the Binance archive once
+  a week, so every experiment in a week compares on identical data. To restart
+  the experiments from scratch, stop the bot and delete
+  `user_data/experiments/` and `user_data/config.baseline.json`.
 - **Tested with** freqtrade 2026.10 (the Docker image is pinned to that version).

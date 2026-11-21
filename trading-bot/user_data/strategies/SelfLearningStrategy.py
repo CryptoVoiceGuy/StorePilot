@@ -43,7 +43,7 @@ from pandas import DataFrame
 from technical import qtpylib
 
 from freqtrade.persistence import Trade
-from freqtrade.strategy import DecimalParameter, IntParameter, IStrategy
+from freqtrade.strategy import IStrategy
 
 
 logger = logging.getLogger(__name__)
@@ -70,16 +70,24 @@ class SelfLearningStrategy(IStrategy):
     trailing_stop_positive_offset = 0.025
     trailing_only_offset_is_reached = True
 
-    # --- Tunable knobs (can be optimised with `freqtrade hyperopt`) -------------
-    # Minimum predicted move before buying. Kraken charges up to 0.4% per side,
-    # so a round trip costs ~0.8%; this must stay comfortably above that.
-    min_edge = DecimalParameter(0.008, 0.03, default=0.012, decimals=3, space="buy", optimize=True)
-    # How unusual (in standard deviations of recent predictions) a signal must be.
-    signal_strength = DecimalParameter(0.0, 2.0, default=1.0, decimals=1, space="buy", optimize=True)
-    # Losing-streak brake: look back this many closed trades...
-    streak_lookback = IntParameter(3, 10, default=6, space="buy", optimize=False)
-    # ...and if they lost money overall, multiply the bar by this.
-    streak_penalty = DecimalParameter(1.0, 2.5, default=1.5, decimals=1, space="buy", optimize=False)
+    # --- Tunable knobs -----------------------------------------------------------
+    # Defaults below; the "selflearning" section of config.json overrides them,
+    # and the self-improvement loop (scripts/improver.py) tunes them one at a time.
+    DEFAULT_KNOBS = {
+        # Minimum predicted move before buying. Kraken charges up to 0.4% per side,
+        # so a round trip costs ~0.8%; this must stay comfortably above that.
+        "min_edge": 0.012,
+        # How unusual (in standard deviations of recent predictions) a signal must be.
+        "signal_strength": 1.0,
+        # Losing-streak brake: look back this many closed trades...
+        "streak_lookback": 6,
+        # ...and if they lost money overall, multiply the bar by this.
+        "streak_penalty": 1.5,
+    }
+
+    @property
+    def knobs(self) -> dict:
+        return {**self.DEFAULT_KNOBS, **self.config.get("selflearning", {})}
 
     plot_config = {
         "main_plot": {},
@@ -186,11 +194,12 @@ class SelfLearningStrategy(IStrategy):
 
         # Self-calibrating bar: mean + k * std of the model's recent predictions,
         # never lower than the fee-covering minimum.
+        knobs = self.knobs
         if "&-s_close_mean" in dataframe and "&-s_close_std" in dataframe:
-            adaptive = dataframe["&-s_close_mean"] + self.signal_strength.value * dataframe["&-s_close_std"]
+            adaptive = dataframe["&-s_close_mean"] + knobs["signal_strength"] * dataframe["&-s_close_std"]
         else:
             adaptive = 0.0
-        dataframe["entry_bar"] = np.maximum(adaptive, self.min_edge.value)
+        dataframe["entry_bar"] = np.maximum(adaptive, knobs["min_edge"])
         return dataframe
 
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
@@ -221,8 +230,9 @@ class SelfLearningStrategy(IStrategy):
         **kwargs,
     ) -> bool:
         """Losing-streak brake: learn from our own recent results."""
-        recent = self._recent_closed_trades(current_time)
-        if len(recent) < self.streak_lookback.value:
+        knobs = self.knobs
+        recent = self._recent_closed_trades(current_time, int(knobs["streak_lookback"]))
+        if len(recent) < knobs["streak_lookback"]:
             return True
         streak_profit = sum(t.close_profit or 0.0 for t in recent)
         if streak_profit >= 0:
@@ -232,7 +242,7 @@ class SelfLearningStrategy(IStrategy):
         if dataframe.empty:
             return False
         last = dataframe.iloc[-1]
-        stricter_bar = last["entry_bar"] * self.streak_penalty.value
+        stricter_bar = last["entry_bar"] * knobs["streak_penalty"]
         if last["&-s_close"] > stricter_bar:
             return True
         logger.info(
@@ -246,11 +256,12 @@ class SelfLearningStrategy(IStrategy):
         )
         return False
 
-    def _recent_closed_trades(self, current_time: datetime) -> list:
+    @staticmethod
+    def _recent_closed_trades(current_time: datetime, count: int) -> list:
         trades = [
             t
             for t in Trade.get_trades_proxy(is_open=False)
             if t.close_date_utc is not None and t.close_date_utc <= current_time
         ]
         trades.sort(key=lambda t: t.close_date_utc)
-        return trades[-self.streak_lookback.value :]
+        return trades[-count:]

@@ -13,7 +13,7 @@ each other, so the prices are a close stand-in. Once the bot is running it
 tops the data up from Kraken itself.
 
 Usage (from the trading-bot folder):
-    python scripts/download_history.py                # default pairs, 450 days
+    python scripts/download_history.py                # default pairs, 500 days
     python scripts/download_history.py --days 200 --pairs BTC/USD ETH/USD
 """
 
@@ -100,29 +100,31 @@ def download_pair(pair: str, timeframe: str, days: int) -> pd.DataFrame:
     return df[df["date"] >= pd.Timestamp(start, tz="UTC")]
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--pairs", nargs="+", default=DEFAULT_PAIRS)
-    parser.add_argument("--timeframes", nargs="+", default=DEFAULT_TIMEFRAMES)
-    parser.add_argument("--days", type=int, default=450)
-    parser.add_argument("--exchange", default="kraken", help="Which exchange folder to store data under")
-    parser.add_argument("--datadir", default=str(Path(__file__).resolve().parent.parent / "user_data" / "data"))
-    args = parser.parse_args()
-
+def download_all(pairs: list[str], timeframes: list[str], days: int, datadir: Path) -> None:
+    """Download every pair/timeframe and store it where freqtrade looks for it."""
     # Imported here so `--help` works without freqtrade installed.
     from freqtrade.data.history import get_datahandler
     from freqtrade.enums import CandleType
 
-    datadir = Path(args.datadir) / args.exchange
     datadir.mkdir(parents=True, exist_ok=True)
     handler = get_datahandler(datadir, "feather")
-
-    for pair in args.pairs:
-        for tf in args.timeframes:
-            df = download_pair(pair, tf, args.days)
+    for pair in pairs:
+        for tf in timeframes:
+            df = download_pair(pair, tf, days)
             handler.ohlcv_store(pair, tf, df, CandleType.SPOT)
             print(f"{pair:10} {tf:>3}: {len(df):6} candles  {df['date'].iloc[0]:%Y-%m-%d} -> {df['date'].iloc[-1]:%Y-%m-%d %H:%M}")
     print(f"Saved to {datadir}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--pairs", nargs="+", default=DEFAULT_PAIRS)
+    parser.add_argument("--timeframes", nargs="+", default=DEFAULT_TIMEFRAMES)
+    parser.add_argument("--days", type=int, default=500)
+    parser.add_argument("--exchange", default="kraken", help="Which exchange folder to store data under")
+    parser.add_argument("--datadir", default=str(Path(__file__).resolve().parent.parent / "user_data" / "data"))
+    args = parser.parse_args()
+    download_all(args.pairs, args.timeframes, args.days, Path(args.datadir) / args.exchange)
     return 0
 
 
