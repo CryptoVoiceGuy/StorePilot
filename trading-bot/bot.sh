@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# One-word commands for the self-learning trading bot. Run ./bot.sh with no
-# arguments to see them all.
+# One-word commands for the trading bot. Run ./bot.sh with no arguments to see
+# them all.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Optional .env file picks the bot: empty = trend bot (default); for the
+# experimental ML bot put BOT_CONFIG=config.ml.json and
+# IMPROVER_SETTINGS=improver.ml.json in it.
+if [[ -f .env ]]; then set -a; source .env; set +a; fi
+BOT_CONFIG="${BOT_CONFIG:-config.json}"
 
 export FT_UID="$(id -u)" FT_GID="$(id -g)"
 PRIVATE_CONFIG="user_data/config.private.json"
@@ -79,23 +85,27 @@ case "${1:-help}" in
     ensure_private_config
     ensure_baseline
     $COMPOSE pull
-    echo "Downloading ~16 months of price history (takes under a minute)..."
-    download_history
+    echo "Downloading price history (takes a minute or two)..."
+    if grep -qE '"timeframe": *"1d"' "user_data/$BOT_CONFIG"; then
+      download_history --days 3450   # daily bot: everything back to 2017 for long backtests
+    else
+      download_history
+    fi
     echo "Setup done. Next: ./bot.sh backtest   or   ./bot.sh start"
     ;;
   update-data)
     download_history "${@:2}"
     ;;
   backtest)
-    # Default: the last 365 days, retraining weekly exactly like the live bot.
-    # The fee is Kraken's worst-case 0.4% per buy or sell.
+    # Default: the last 365 days (try ./bot.sh backtest 20190101- for the long view).
+    # Costs: Kraken's worst-case 0.4% fee + 0.1% slippage per buy or sell.
     # Uses the current baseline, i.e. including every improvement kept so far.
     ensure_baseline
     timerange="${2:-$(days_ago 365)-}"
     $COMPOSE run --rm --no-deps freqtrade backtesting \
-      --config /freqtrade/user_data/config.json \
+      --config "/freqtrade/user_data/$BOT_CONFIG" \
       --config /freqtrade/user_data/config.baseline.json \
-      --timerange "$timerange" --fee 0.004 --cache none --export trades
+      --timerange "$timerange" --fee 0.005 --cache none --export trades
     ;;
   start)
     ensure_private_config
@@ -136,7 +146,8 @@ case "${1:-help}" in
     if live_mode; then
       db="sqlite:///user_data/tradesv3.live.sqlite"; out="user_data/trades-real-money.csv"
     else
-      db="sqlite:///user_data/tradesv3.dryrun.sqlite"; out="user_data/trades-paper.csv"
+      # Paper trades live in the database named in the active bot config.
+      db=$(grep -o '"db_url": *"[^"]*"' "user_data/$BOT_CONFIG" | cut -d'"' -f4); out="user_data/trades-paper.csv"
     fi
     $COMPOSE run --rm --no-deps --entrypoint python freqtrade \
       /freqtrade/storepilot_scripts/export_trades.py --db-url "$db" --out "/freqtrade/$out"

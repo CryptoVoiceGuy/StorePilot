@@ -13,14 +13,16 @@ each other, so the prices are a close stand-in. Once the bot is running it
 tops the data up from Kraken itself.
 
 Usage (from the trading-bot folder):
-    python scripts/download_history.py                # default pairs, 500 days
-    python scripts/download_history.py --days 200 --pairs BTC/USD ETH/USD
+    python scripts/download_history.py                # the bot config's pairs and timeframes, 800 days
+    python scripts/download_history.py --days 200 --pairs BTC/USD ETH/USD --timeframes 1d
 """
 
 from __future__ import annotations
 
 import argparse
 import io
+import json
+import os
 import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
@@ -31,9 +33,17 @@ import pandas as pd
 import requests
 
 BASE_URL = "https://data.binance.vision/data/spot"
-DEFAULT_PAIRS = ["BTC/USD", "ETH/USD", "SOL/USD"]
-DEFAULT_TIMEFRAMES = ["1h", "4h"]
+USER_DATA = Path(__file__).resolve().parent.parent / "user_data"
 COLUMNS = ["date", "open", "high", "low", "close", "volume"]
+
+
+def config_pairs_and_timeframes(config_path: Path) -> tuple[list[str], list[str]]:
+    """Pairs and timeframes the bot config needs (including FreqAI's extra timeframes)."""
+    cfg = json.loads(config_path.read_text())
+    timeframes = [cfg["timeframe"]]
+    if cfg.get("freqai", {}).get("enabled"):
+        timeframes += cfg["freqai"]["feature_parameters"]["include_timeframes"]
+    return cfg["exchange"]["pair_whitelist"], sorted(set(timeframes))
 
 
 def binance_symbol(pair: str) -> str:
@@ -111,6 +121,12 @@ def download_all(pairs: list[str], timeframes: list[str], days: int, datadir: Pa
     for pair in pairs:
         for tf in timeframes:
             df = download_pair(pair, tf, days)
+            # Merge with what is already on disk so a short refresh never throws
+            # away older history (new candles win where both exist).
+            old = handler.ohlcv_load(pair, tf, CandleType.SPOT, fill_missing=False, drop_incomplete=False)
+            if not old.empty:
+                df = pd.concat([old, df]).drop_duplicates("date", keep="last").sort_values("date")
+                df = df.reset_index(drop=True)
             handler.ohlcv_store(pair, tf, df, CandleType.SPOT)
             print(f"{pair:10} {tf:>3}: {len(df):6} candles  {df['date'].iloc[0]:%Y-%m-%d} -> {df['date'].iloc[-1]:%Y-%m-%d %H:%M}")
     print(f"Saved to {datadir}")
@@ -118,13 +134,16 @@ def download_all(pairs: list[str], timeframes: list[str], days: int, datadir: Pa
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--pairs", nargs="+", default=DEFAULT_PAIRS)
-    parser.add_argument("--timeframes", nargs="+", default=DEFAULT_TIMEFRAMES)
-    parser.add_argument("--days", type=int, default=500)
+    parser.add_argument("--config", default=str(USER_DATA / os.environ.get("BOT_CONFIG", "config.json")),
+                        help="Bot config to read pairs/timeframes from (default: user_data/config.json)")
+    parser.add_argument("--pairs", nargs="+", help="Override the config's pairs")
+    parser.add_argument("--timeframes", nargs="+", help="Override the config's timeframes")
+    parser.add_argument("--days", type=int, default=800)
     parser.add_argument("--exchange", default="kraken", help="Which exchange folder to store data under")
-    parser.add_argument("--datadir", default=str(Path(__file__).resolve().parent.parent / "user_data" / "data"))
+    parser.add_argument("--datadir", default=str(USER_DATA / "data"))
     args = parser.parse_args()
-    download_all(args.pairs, args.timeframes, args.days, Path(args.datadir) / args.exchange)
+    pairs, timeframes = config_pairs_and_timeframes(Path(args.config))
+    download_all(args.pairs or pairs, args.timeframes or timeframes, args.days, Path(args.datadir) / args.exchange)
     return 0
 
 

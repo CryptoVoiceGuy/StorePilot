@@ -1,11 +1,12 @@
 # Two services, both running 24/7 in paper-trading (dry-run) mode:
-#   freqtrade  - the trading bot (retrains its model every 6 hours)
+#   freqtrade  - the trading bot (TrendStrategy by default; README explains how
+#                to switch to the experimental machine-learning bot)
 #   improver   - the self-improvement loop: changes one setting at a time,
 #                tests it, and keeps it only if it is better
 # Use ./bot.sh instead of calling this directly; it fills in the user IDs below.
 
 x-common: &common
-  # Pinned version: the strategy was tested against this exact release.
+  # Pinned version: the strategies were tested against this exact release.
   image: freqtradeorg/freqtrade:2026.10_freqai
   restart: unless-stopped          # comes back by itself after crashes or reboots
   # Run as your own user so files in user_data stay yours (avoids permission errors on Linux).
@@ -21,13 +22,14 @@ services:
     environment:
       # The image installs freqtrade under ftuser; let any user ID find it.
       PYTHONUSERBASE: /home/ftuser/.local
+      BOT_CONFIG: ${BOT_CONFIG:-config.json}
     ports:
       # Dashboard, only reachable from this computer: http://localhost:8080
       - "127.0.0.1:8080:8080"
     command: >
       trade
       --logfile /freqtrade/user_data/logs/freqtrade.log
-      --config /freqtrade/user_data/config.json
+      --config /freqtrade/user_data/${BOT_CONFIG:-config.json}
       --config /freqtrade/user_data/config.baseline.json
       --config /freqtrade/user_data/config.private.json
 
@@ -37,6 +39,8 @@ services:
     depends_on: [freqtrade]
     environment:
       PYTHONUSERBASE: /home/ftuser/.local
+      BOT_CONFIG: ${BOT_CONFIG:-config.json}
+      IMPROVER_SETTINGS: ${IMPROVER_SETTINGS:-improver.json}
       BOT_API_URL: http://freqtrade:8080
     # Low CPU priority so experiments never slow down the trading bot.
     entrypoint: ["nice", "-n", "15", "python", "/freqtrade/storepilot_scripts/improver.py"]

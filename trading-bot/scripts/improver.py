@@ -48,11 +48,12 @@ STATE_FILE = EXP_DIR / "state.json"
 JOURNAL_FILE = EXP_DIR / "journal.jsonl"
 PENDING_FILE = EXP_DIR / "pending_baseline.json"
 LOCK_FILE = EXP_DIR / ".lock"
-BASE_CONFIG = USER_DATA / "config.json"
+# Which bot config / improver settings to use: the trend bot by default, or set
+# BOT_CONFIG=config.ml.json IMPROVER_SETTINGS=improver.ml.json for the ML bot.
+BASE_CONFIG = USER_DATA / os.environ.get("BOT_CONFIG", "config.json")
 BASELINE_FILE = USER_DATA / "config.baseline.json"
 PRIVATE_CONFIG = USER_DATA / "config.private.json"
-SETTINGS_FILE = USER_DATA / "improver.json"
-STRATEGY = "SelfLearningStrategy"
+SETTINGS_FILE = USER_DATA / os.environ.get("IMPROVER_SETTINGS", "improver.json")
 
 
 # --------------------------------------------------------------------------- helpers
@@ -127,6 +128,10 @@ def load_settings() -> dict:
     return settings
 
 
+def uses_freqai(cfg: dict) -> bool:
+    return bool(cfg.get("freqai", {}).get("enabled"))
+
+
 def score(metrics: dict, goal: dict) -> float:
     return round(metrics["profit_pct"] - goal["drawdown_weight"] * metrics["drawdown_pct"], 2)
 
@@ -185,20 +190,14 @@ def refresh_data(settings: dict, base_cfg: dict, windows: dict, state: dict) -> 
     if state.get("data_week") == windows["week"]:
         return
     sys.path.insert(0, str(SCRIPTS))
-    from download_history import download_all
+    from download_history import config_pairs_and_timeframes, download_all
 
     search_start = datetime.strptime(windows["search"].split("-")[0], "%Y%m%d").date()
-    longest_training = max(
-        [base_cfg["freqai"]["train_period_days"], *settings["variables"].get("freqai.train_period_days", [])]
-    )
-    days = (date.today() - search_start).days + longest_training + 30
+    # Extra history before the search window: model training and indicator warm-up.
+    days = (date.today() - search_start).days + settings.get("extra_history_days", 150)
     log(f"New week ({windows['week']}): refreshing {days} days of price history...")
-    download_all(
-        base_cfg["exchange"]["pair_whitelist"],
-        base_cfg["freqai"]["feature_parameters"]["include_timeframes"],
-        days,
-        USER_DATA / "data" / base_cfg["exchange"]["name"],
-    )
+    pairs, timeframes = config_pairs_and_timeframes(BASE_CONFIG)
+    download_all(pairs, timeframes, days, USER_DATA / "data" / base_cfg["exchange"]["name"])
     state["data_week"] = windows["week"]
     save_json(STATE_FILE, state)
 
@@ -210,7 +209,10 @@ def run_backtest(overlay: dict, timerange: str, tag: str, fee: float, extra_conf
     run_dir.mkdir(parents=True)
     identifier = f"improver-{tag}"
     overlay_path = run_dir / "overlay.json"
-    save_json(overlay_path, deep_merge(overlay, {"freqai": {"identifier": identifier}}))
+    if uses_freqai(load_json(BASE_CONFIG)):
+        # Each experiment trains its own models, deleted afterwards.
+        overlay = deep_merge(overlay, {"freqai": {"identifier": identifier}})
+    save_json(overlay_path, overlay)
 
     cmd = [sys.executable, "-m", "freqtrade", "backtesting", "--userdir", str(USER_DATA)]
     for cfg in [BASE_CONFIG, *extra_configs, overlay_path]:
@@ -246,7 +248,7 @@ def parse_result(run_dir: Path) -> dict:
     with zipfile.ZipFile(zips[-1]) as zf:
         name = next(n for n in zf.namelist() if n.endswith(".json") and "_config" not in n)
         data = json.loads(zf.read(name))
-    s = data["strategy"][STRATEGY]
+    s = next(iter(data["strategy"].values()))  # one strategy per backtest
     return {
         "profit_pct": round(s["profit_total"] * 100, 2),
         "drawdown_pct": round(s["max_drawdown_account"] * 100, 2),
@@ -385,6 +387,8 @@ def live_is_dry_run() -> bool:
 def live_overlay(overlay: dict, baseline_id: str) -> dict:
     # A fresh model folder per baseline, so the live bot never loads a model
     # that was trained with different settings or inputs.
+    if not uses_freqai(load_json(BASE_CONFIG)):
+        return overlay
     return deep_merge(overlay, {"freqai": {"identifier": f"self-learning-{baseline_id}"}})
 
 
