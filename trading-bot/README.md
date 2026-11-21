@@ -2,7 +2,7 @@
 
 A crypto trading bot that runs 24/7, retrains its own machine-learning model on
 the newest market data every few hours, and paper-trades BTC, ETH and SOL on
-Kraken with a pretend $50 wallet. Alongside it, a second process keeps
+Kraken with a pretend wallet of about A$100 (US$65). Alongside it, a second process keeps
 experimenting with the bot's settings **like a scientist**. It changes one thing
 at a time, tests it, and keeps the change only if it proves better.
 
@@ -86,9 +86,9 @@ so it never slows the trading bot, with a 15-minute pause between experiments.
 
 | Rule | Setting |
 |---|---|
-| Money | Paper trading with a pretend $50 (`dry_run: true`) |
+| Money | Paper trading with a pretend US$65, about A$100 (`dry_run: true`) |
 | Direction | Buys only. No shorting, no leverage, no borrowing |
-| Positions | At most 2 coins at once, about $25 each |
+| Positions | At most 2 coins at once, about US$32 (A$50) each |
 | Max loss per trade | 5% stop-loss |
 | Lock in gains | Once a trade is up 2.5%, a 1% trailing stop protects the profit |
 | Max holding time | 24 hours |
@@ -108,6 +108,9 @@ Fees were charged at Kraken's worst case of 0.4% per buy or sell.
 | Earlier version (before a bug fix) | $50 | $41.62 | −16.8% (45 trades, 42% won) |
 | Just holding BTC, ETH and SOL | | | **−52.9%** |
 
+These backtests used a $50 wallet. The percentages are what matter: at −29.2%,
+A$100 would have ended the year at about **A$71**.
+
 What this tells us:
 - It lost much less than holding through a very bad year for crypto, mostly
   because it sits in cash most of the time.
@@ -122,7 +125,7 @@ What this tells us:
   Windows or Linux). It runs the bot in a sealed box with everything installed.
 - **A computer that stays on**, for 24/7 running. Either your own computer
   (don't let it sleep) or a small cloud server (4 GB RAM recommended, because the
-  bot and the improver run side by side; roughly $10–20 a month). On a $50
+  bot and the improver run side by side; roughly $10–20 a month). On an A$100
   account a server costs more than the bot could plausibly earn, so run it on your
   own computer while it's in paper mode.
 - On Windows, run the commands below in **WSL** or **Git Bash**.
@@ -140,6 +143,7 @@ cd trading-bot
 Then open **http://localhost:8080** in your browser and log in.
 
 Other commands: `./bot.sh experiments` (what the improver tried and kept),
+`./bot.sh trades` (save every trade to a spreadsheet),
 `./bot.sh logs` (watch it live; `./bot.sh logs improver` for only the
 experiments), `./bot.sh status`, `./bot.sh stop`, `./bot.sh restart` (after
 editing settings). Run `./bot.sh` on its own to see them all.
@@ -168,9 +172,32 @@ Only consider it if **all** of these are true:
 - [ ] You understand why it made each trade (the dashboard shows this)
 
 If you get there: create a Kraken API key with **trading permission only, never
-withdrawal permission**. Put the key and secret in `user_data/config.private.json`
-under `"exchange"`, set `"dry_run": false` there, and start with an amount you'd
-be fine losing completely.
+withdrawal permission**. Add these lines to `user_data/config.private.json`, next to
+the `"api_server"` part that's already there. Never paste keys into a chat or commit them.
+
+```json
+  "dry_run": false,
+  "db_url": "sqlite:///user_data/tradesv3.live.sqlite",
+  "exchange": { "key": "YOUR-KRAKEN-API-KEY", "secret": "YOUR-KRAKEN-API-SECRET" },
+```
+
+The separate `db_url` keeps real trades apart from paper trades. `./bot.sh start`
+refuses to start in real-money mode without it. Start with an amount you'd be fine
+losing completely. In real-money mode the improver still runs, but new settings
+wait for `./bot.sh approve`.
+
+### If you're in Australia
+
+- **Trade the USD pairs, not the AUD ones.** Kraken lists BTC/AUD, ETH/AUD and
+  SOL/AUD, but in Nov 2026 their spreads (the gap between buy and sell prices)
+  were 0.11–0.26%, against 0.00–0.03% on the USD pairs, with about 100 times less
+  trading. That extra cost on every trade is a big handicap for a bot aiming for
+  ~1% moves. Deposit AUD into Kraken, convert it to USD once (A$100 ≈ US$66 at
+  0.658), and let the bot trade in USD.
+- **Tax:** the ATO treats every crypto sale or swap as a capital gains event, so
+  each trade the bot makes needs a record. `./bot.sh trades` saves every trade
+  (dates, prices, fees, profit or loss) to a CSV spreadsheet in `user_data/`. Talk
+  to an accountant or check the ATO's crypto guidance before trading real money.
 
 ## Ideas for what to add next
 

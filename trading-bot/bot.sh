@@ -44,6 +44,20 @@ show_login() {
   echo "Dashboard: http://localhost:8080   username: $user   password: $pass"
 }
 
+live_mode() {
+  grep -qE '"dry_run"[[:space:]]*:[[:space:]]*false' "$PRIVATE_CONFIG" 2>/dev/null
+}
+
+check_live_db() {
+  # Paper trades and real trades must never share a database.
+  if live_mode && ! grep -q 'tradesv3.live.sqlite' "$PRIVATE_CONFIG"; then
+    echo "Refusing to start: real-money mode needs its own trade database."
+    echo "Add this line to $PRIVATE_CONFIG:"
+    echo '  "db_url": "sqlite:///user_data/tradesv3.live.sqlite",'
+    exit 1
+  fi
+}
+
 ensure_baseline() {
   # Settings the self-improvement loop has proven better; starts empty.
   [[ -f user_data/config.baseline.json ]] || echo '{}' >user_data/config.baseline.json
@@ -86,9 +100,14 @@ case "${1:-help}" in
   start)
     ensure_private_config
     ensure_baseline
+    check_live_db
     mkdir -p user_data/logs
     $COMPOSE up -d
-    echo "Bot started in PAPER-TRADING mode (no real money)."
+    if live_mode; then
+      echo "Bot started with REAL MONEY. New improvements wait for ./bot.sh approve."
+    else
+      echo "Bot started in PAPER-TRADING mode (no real money)."
+    fi
     echo "The self-improvement loop is running too: ./bot.sh experiments shows what it has tried."
     show_login
     ;;
@@ -113,6 +132,15 @@ case "${1:-help}" in
   approve)
     improver approve
     ;;
+  trades)
+    if live_mode; then
+      db="sqlite:///user_data/tradesv3.live.sqlite"; out="user_data/trades-real-money.csv"
+    else
+      db="sqlite:///user_data/tradesv3.dryrun.sqlite"; out="user_data/trades-paper.csv"
+    fi
+    $COMPOSE run --rm --no-deps --entrypoint python freqtrade \
+      /freqtrade/storepilot_scripts/export_trades.py --db-url "$db" --out "/freqtrade/$out"
+    ;;
   status)
     $COMPOSE ps
     ;;
@@ -136,6 +164,7 @@ Usage: ./bot.sh <command>
   experiments   What the self-improvement loop has tried, kept and thrown away
   improve-once  Run one experiment now (in the foreground)
   approve       Real-money mode only: put the latest proven improvement live
+  trades        Save every trade to a CSV spreadsheet (for your records / tax)
   update-data   Re-download price history
 EOF
     ;;

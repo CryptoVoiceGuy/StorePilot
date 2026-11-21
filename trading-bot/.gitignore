@@ -14,4 +14,5 @@ user_data/plot/
 user_data/*.sqlite
 user_data/*.sqlite-*
 user_data/*.lock
+user_data/trades-*.csv
 __pycache__/
