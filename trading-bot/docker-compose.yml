@@ -1,0 +1,25 @@
+# Runs the trading bot 24/7 in paper-trading (dry-run) mode.
+# Use ./bot.sh instead of calling this directly; it fills in the user IDs below.
+services:
+  freqtrade:
+    # Pinned version: the strategy was tested against this exact release.
+    image: freqtradeorg/freqtrade:2026.10_freqai
+    container_name: storepilot-trading-bot
+    restart: unless-stopped          # comes back by itself after crashes or reboots
+    # Run as your own user so files in user_data stay yours (avoids permission errors on Linux).
+    user: "${FT_UID:-1000}:${FT_GID:-1000}"
+    environment:
+      # The image installs freqtrade under ftuser; let any user ID find it.
+      PYTHONUSERBASE: /home/ftuser/.local
+    volumes:
+      - "./user_data:/freqtrade/user_data"
+      - "./scripts:/freqtrade/storepilot_scripts:ro"
+    ports:
+      # Dashboard, only reachable from this computer: http://localhost:8080
+      - "127.0.0.1:8080:8080"
+    command: >
+      trade
+      --logfile /freqtrade/user_data/logs/freqtrade.log
+      --db-url sqlite:////freqtrade/user_data/tradesv3.dryrun.sqlite
+      --config /freqtrade/user_data/config.json
+      --config /freqtrade/user_data/config.private.json
